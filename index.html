@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Inventory Manager — EMD</title>
+
+<!-- Tailwind via CDN (for quick prototype) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- PapaParse for CSV import/export -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<!-- SheetJS (xlsx) to create multi-sheet Excel files in browser -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900">
+  <div class="max-w-5xl mx-auto p-6">
+    <header class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-bold">Inventory Manager</h1>
+        <div class="text-sm text-slate-500">Created by Amit Nayak</div>
+      </div>
+      <nav class="flex items-center gap-3 text-sky-600">
+        <a href="#/">Home</a>
+        <a href="#/categories">Inventories</a>
+        <a href="#/sync">Export Data</a>
+        <a href="#/activities">Log History </a>
+      </nav>
+    </header>
+
+    <main id="app" class="space-y-6"></main>
+
+    <footer class="mt-8 text-sm text-slate-600">Saved to localStorage (key: <code class="bg-slate-100 px-1 rounded">inventory_v1</code>)</footer>
+  </div>
+
+<script>
+/* Single-file inventory app (Tailwind UI classes) */
+const STORAGE_KEY = 'inventory_v1';
+const uid = ()=> Math.random().toString(36).slice(2,9);
+
+// small default
+const DEFAULT = {
+  categories:['A','B'],
+  items:[
+    {id:uid(), name:'amit (kg)', category:'A', qty:20, unit:'Meter', location:'Shelf 1', history:[]}
+  ]
+};
+const EXPORT_EXCLUDE_IDS = new Set(['3vnrdby','cd3i0ym','eqz0ke3']);
+
+function sanitizeSheetName(name) {
+  if (!name) name = 'Sheet';
+  let clean = String(name).replace(/[:\\\/\?\*\[\]]/g, ' ');
+  clean = clean.slice(0,31);
+  if (!clean.trim()) clean = 'Sheet';
+  return clean;
+}
+
+function load(){ try{ const s = localStorage.getItem(STORAGE_KEY); const parsed = s?JSON.parse(s):JSON.parse(JSON.stringify(DEFAULT));
+    parsed.categories = (parsed.categories||[]).filter(c => c === 'A' || c === 'B' || c.startsWith('A /') || c.startsWith('B /'));
+    if(!parsed.categories.includes('A')) parsed.categories.push('A');
+    if(!parsed.categories.includes('B')) parsed.categories.push('B');
+    parsed.items = (parsed.items||[]).map(it => { if(it.category === 'A' || it.category === 'B' || (typeof it.category === 'string' && (it.category.startsWith('A /') || it.category.startsWith('B /')))) return it; return {...it, category: 'A'}; });
+    parsed.items = parsed.items.map(it => ({ ...it, location: it.location || '' }));
+    return parsed; }catch(e){console.error(e);return JSON.parse(JSON.stringify(DEFAULT))} }
+
+function save(d){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }catch(e){console.error(e);} }
+
+let state = load();
+let undoTimer = null; let currentUndo = null;
+let currentPieFilter = null;
+
+// NEW: recent limit state for Home
+let recentLimit = 10;
+
+function pushUndo(text,revert,timeout=6000){ currentUndo = {text,revert}; renderUndo(); if(undoTimer) clearTimeout(undoTimer); undoTimer = setTimeout(()=>{ currentUndo=null; renderUndo(); }, timeout); }
+function clearUndo(){ if(undoTimer) clearTimeout(undoTimer); undoTimer=null; currentUndo=null; renderUndo(); }
+function persist(fn){ state = fn(JSON.parse(JSON.stringify(state))); save(state); routeRender(); try{ document.dispatchEvent(new CustomEvent('statechange')); }catch(e){} }
+
+function addCategory(name){ if(!name) return; if(state.categories.includes(name)) return; persist(d=>({...d, categories:[...d.categories,name]})); }
+function editCategory(oldn,newn){ if(!newn||oldn===newn) return; persist(d=>({...d, categories:d.categories.map(c=>c===oldn?newn:c), items:d.items.map(it=> it.category===oldn?{...it,category:newn}:it) })); }
+function deleteCategory(name){ const snap = JSON.parse(JSON.stringify(state)); persist(d=>({...d, categories:d.categories.filter(c=>c!==name), items:d.items.map(it=> it.category===name?{...it,category:'Uncategorized'}:it)})); pushUndo('Deleted category '+name, ()=>{ state = snap; save(state); routeRender(); }); }
+function addItem(item){ item.location = item.location || ''; persist(d=>({...d, items:[item,...d.items]})); }
+function updateItem(id,patch){ persist(d=>({...d, items:d.items.map(it => it.id===id?{...it,...patch}:it)})); }
+function deleteItem(id){ const snap=JSON.parse(JSON.stringify(state)); persist(d=>({...d, items:d.items.filter(i=>i.id!==id)})); pushUndo('Deleted item', ()=>{ state=snap; save(state); routeRender(); }); }
+function recordConsumption(itemId,amount,note=''){ persist(d=>({...d, items:d.items.map(it=>{ if(it.id!==itemId) return it; const newQty=Number(it.qty)-Number(amount); const entry={id:uid(),date:new Date().toISOString(),amount:Number(amount),note}; return {...it, qty:newQty<0?0:newQty, history:[entry,...(it.history||[]) ]}; })})); }
+function deleteActivity(itemId,entryId){ const it = state.items.find(i=>i.id===itemId); if(!it) return; const entry = (it.history||[]).find(h=>h.id===entryId); if(!entry) return; persist(d=>({...d, items:d.items.map(i=> i.id===itemId?{...i, history:(i.history||[]).filter(h=>h.id!==entryId)}:i)})); pushUndo('Deleted activity', ()=>{ persist(d=>({...d, items:d.items.map(i=> i.id===itemId?{...i, history:[entry,...(i.history||[])]}:i)})); }); }
+
+// ---------- export logic (XLSX) - modified per your requests ----------
+function exportExcel(){
+  try{
+    console.log('[exportExcel] started');
+
+    if (typeof XLSX === 'undefined') {
+      alert('XLSX not loaded');
+      return;
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    const belongsToMain = (it, main) =>
+      it.category === main || it.category.startsWith(main + ' /');
+
+    const usedNames = new Set();
+    const idToSheetName = {};
+    const itemsToExport = state.items.filter(it => it && !EXPORT_EXCLUDE_IDS.has(it.id));
+
+    // -----------------------------
+    // 1) BUILD HISTORY SHEETS FIRST
+    //    (BUT DO NOT APPEND THEM YET)
+    // -----------------------------
+    const pendingHistorySheets = [];
+
+    itemsToExport.forEach(it => {
+      try {
+        const hist = (it.history || []).slice().sort((a,b)=> new Date(a.date)-new Date(b.date));
+
+        const rows = hist.map(h=>{
+          let d = '';
+          try { d = new Date(h.date).toISOString().slice(0,10); }
+          catch(e){ d = String(h.date).slice(0,10); }
+
+          const signed = (h.note === 'Stock added')
+            ? ('+' + Number(h.amount||0))
+            : ('-' + Number(h.amount||0));
+
+          return [d, signed, h.note || ''];
+        });
+
+        const aoa = [];
+        aoa.push([it.name || 'Unnamed item']);   // A1 name
+        aoa.push(['Date','Quantity','Note']);     // Header
+        rows.forEach(r => aoa.push(r));
+
+        const base = `${it.name || 'item'} history`;
+        let sheetName = sanitizeSheetName(base);
+        let n = 1;
+        while (usedNames.has(sheetName)) {
+          const suf = ` ${n++}`;
+          const avail = 31 - suf.length;
+          sheetName =
+            sanitizeSheetName(base.slice(0, avail)) + suf;
+        }
+        usedNames.add(sheetName);
+        idToSheetName[it.id] = sheetName;
+
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = [{wpx:100},{wpx:80},{wpx:220}];
+
+        // store sheet (do NOT append yet)
+        pendingHistorySheets.push({ title: sheetName, ws });
+
+      } catch(err){
+        console.error('history sheet error', err);
+      }
+    });
+
+    // -----------------------------
+    // 2) CREATE STOCK SHEETS (FIRST!)
+    // -----------------------------
+    function buildStockRows(main){
+      const rows = [];
+      rows.push(['Name','Qty','Unit','Location','History']);
+
+      state.items
+        .filter(it => it && !EXPORT_EXCLUDE_IDS.has(it.id) && belongsToMain(it, main))
+        .forEach(it=>{
+          rows.push([
+            it.name || '',
+            Number(it.qty||0),
+            it.unit || '',
+            it.location || '',
+            idToSheetName[it.id] || ''   // temporarily insert sheetName
+          ]);
+        });
+      return rows;
+    }
+
+    function appendStockSheet(title, aoaRows){
+      const ws = XLSX.utils.aoa_to_sheet(aoaRows);
+      ws['!cols'] = [{wpx:220},{wpx:80},{wpx:80},{wpx:160},{wpx:80}];
+
+      // Convert 5th column to hyperlinks
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for(let r = range.s.r + 1; r <= range.e.r; r++){
+        const cellAddr = XLSX.utils.encode_cell({c:4, r});
+        const cell = ws[cellAddr];
+        if(cell && typeof cell.v === 'string' && cell.v.trim()){
+          const sheetName = cell.v.replace(/'/g,"''");
+          ws[cellAddr] = {
+            t: 's',
+            f: `HYPERLINK("#'${sheetName}'!A1","History")`
+          };
+        } else {
+          ws[cellAddr] = { t:'s', v:'' };
+        }
+      }
+
+      XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(title));
+      console.log('Appended stock sheet:', title);
+    }
+
+    appendStockSheet('Stocks - A', buildStockRows('A'));
+    appendStockSheet('Stocks - B', buildStockRows('B'));
+
+    // -----------------------------
+    // 3) APPEND HISTORY SHEETS LAST
+    // -----------------------------
+    pendingHistorySheets.forEach(s =>
+      XLSX.utils.book_append_sheet(wb, s.ws, s.title)
+    );
+
+    // -----------------------------
+    // 4) SAVE WORKBOOK
+    // -----------------------------
+    const filename = `inventory_${Date.now()}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    console.log('Export complete');
+
+  } catch(err){
+    console.error('Export failed:', err);
+    alert('Export failed — see console');
+  }
+}
+
+
+// ---------- end exportExcel ----------
+
+function exportCSV(){ exportExcel(); }
+function importCSV(file,opts={merge:true}){ return new Promise((resolve,reject)=>{ Papa.parse(file,{header:true,skipEmptyLines:true,complete:(res)=>{ const rows=res.data.map(r=>({id:r.id||uid(),name:r.name,category:r.category||'Uncategorized',qty:Number(r.qty||0),unit:r.unit||'pcs',location:r.location||'',history:[]})); persist(d=> opts.merge?({...d, categories:Array.from(new Set([...d.categories,...rows.map(r=>r.category)])), items:[...rows,...d.items]}) : ({...d, categories:Array.from(new Set(rows.map(r=>r.category))), items:rows})); resolve(rows.length); }, error:reject }); }); }
+
+// DOM & routing
+const app = document.getElementById('app');
+window.addEventListener('hashchange', routeRender);
+window.addEventListener('load', routeRender);
+
+if(!window.__statechange_attached){
+  window.__statechange_attached = true;
+  document.addEventListener('statechange', ()=>{
+    const h = (location.hash && location.hash.startsWith('#')) ? location.hash.slice(1) : (location.hash || '/');
+    try{
+      if(h.startsWith('/categories')) renderCategories();
+      else if(h.startsWith('/category/')) { const name = decodeURIComponent(h.split('/')[2]||''); renderCategory(name); }
+      else if(h.startsWith('/sync')) renderSync();
+      else if(h.startsWith('/activities')) renderAllActivities();
+      else renderHome();
+    }catch(e){ routeRender(); }
+  });
+}
+
+function routeRender(){
+  const h = (location.hash && location.hash.startsWith('#')) ? location.hash.slice(1) : (location.hash || '/');
+  if (h.startsWith('/category/')) {
+    const name = decodeURIComponent(h.split('/')[2]||'');
+    renderCategory(name);
+  } else if (h.startsWith('/categories/')) {
+    const name = decodeURIComponent(h.split('/')[2]||'');
+    renderCategory(name);
+  } else if (h.startsWith('/categories')) {
+    renderCategories();
+  } else if (h.startsWith('/sync')) {
+    renderSync();
+  } else if (h.startsWith('/activities')) {
+    renderAllActivities();
+  } else {
+    renderHome();
+  }
+}
+
+/* helpers */
+function el(tag,attrs={},children=[]){ const SVG_TAGS = new Set(['svg','path','circle','rect','text','g','line','polyline','polygon','ellipse']); const SVG_NS = 'http://www.w3.org/2000/svg'; const isSvg = SVG_TAGS.has(tag);
+  const d = isSvg ? document.createElementNS(SVG_NS, tag) : document.createElement(tag);
+  for(const k in attrs){
+    if(k==='class') d.className = attrs[k];
+    else if(k==='html') d.innerHTML = attrs[k];
+    else if(k.startsWith('on') && typeof attrs[k]==='function') d.addEventListener(k.slice(2), attrs[k]);
+    else d.setAttribute(k, attrs[k]);
+  }
+  (Array.isArray(children)?children:[children]).forEach(c=>{ if(c==null) return; if(typeof c==='string'||typeof c==='number') d.appendChild(document.createTextNode(String(c))); else d.appendChild(c); });
+  return d; }
+function clear(elm){ while(elm.firstChild) elm.removeChild(elm.firstChild); }
+
+function renderUndo(){ const old = document.getElementById('undo-snack'); if(old) old.remove(); if(!currentUndo) return; const box = el('div',{id:'undo-snack', class:'fixed left-6 bottom-6 bg-slate-900 text-white px-4 py-2 rounded shadow flex items-center gap-3 z-50'}, [ currentUndo.text, el('button',{class:'underline', onclick:()=>{ if(currentUndo.revert) currentUndo.revert(); clearUndo(); }},'Undo'), el('button',{class:'text-xs px-2 py-1 border rounded bg-white text-slate-900', onclick:clearUndo}, 'Dismiss') ]); document.body.appendChild(box); }
+
+/* PAGES */
+
+// Home now uses recentLimit and a Load more / Show less button
+function renderHome(){
+  clear(app);
+  const overview = el('section',{class:'bg-white p-4 rounded shadow no-pop'}, [
+    el('h2',{class:'text-lg font-semibold mb-3'}, 'Overview'),
+    el('div',{class:'grid grid-cols-1 md:grid-cols-2 gap-4'}, [ renderCategoryPie() ])
+  ]);
+
+  const itemsSection = currentPieFilter ? el('section',{class:'bg-white p-4 rounded shadow mt-4'}, [ el('h2',{class:'text-lg font-semibold mb-2'}, `Items (qty) — ${currentPieFilter}`), renderItemsBar() ]) : null;
+
+  const quickA = el('section',{class:'bg-white p-4 rounded shadow mt-4'}, [ el('h2',{class:'text-lg font-semibold mb-2'}, 'Quick Entry — Lighting'), renderQuickForCategory('A') ]);
+  const quickB = el('section',{class:'bg-white p-4 rounded shadow mt-4'}, [ el('h2',{class:'text-lg font-semibold mb-2'}, 'Quick Entry — Cabling'), renderQuickForCategory('B') ]);
+
+  // Recent Activity — controlled by recentLimit
+  const recent = el('section',{class:'bg-white p-4 rounded shadow no-pop mt-4'}, [
+    el('h2',{class:'text-lg font-semibold mb-2'}, 'Recent Activity'),
+    renderRecentActivity(recentLimit),
+    // Load more / Show less button
+    (function(){
+      const totalEntries = state.items.flatMap(i=>(i.history||[])).length;
+      if(totalEntries <= 10) return el('div',{class:'text-sm text-slate-500 mt-2'}, `Total entries: ${totalEntries}`);
+      const btn = el('button',{class:'px-3 py-1 mt-3 bg-sky-600 text-white rounded'}, totalEntries > recentLimit ? 'Load more' : 'Show less');
+      btn.addEventListener('click', ()=>{
+        if(totalEntries > recentLimit){
+          recentLimit = Math.min(totalEntries, recentLimit + 10);
+        } else {
+          recentLimit = 10;
+        }
+        routeRender();
+      });
+      return el('div',{class:'mt-3'}, btn);
+    })()
+  ]);
+
+  app.appendChild(overview);
+  if(itemsSection) app.appendChild(itemsSection);
+  app.appendChild(quickA);
+  app.appendChild(quickB);
+  app.appendChild(recent);
+  renderUndo();
+}
+
+function renderCategoryPie(){
+  function buildDataForMain(main){
+  const prefix = main + ' / ';
+  const buckets = new Map();
+
+  // Only add subcategories (NOT the main category)
+  (state.categories || []).forEach(c => {
+    if (c.startsWith(prefix)) buckets.set(c, 0);
+  });
+
+  state.items.forEach(it => {
+    if (typeof it.category === 'string' && it.category.startsWith(prefix)) {
+      buckets.set(it.category, (buckets.get(it.category) || 0) + Number(it.qty || 0));
+    }
+  });
+
+  return Array.from(buckets.entries())
+              .map(([k, v]) => ({ name: k, value: v }))
+              .filter(x => x.value > 0);
+
+  }
+
+  function renderSinglePie(main){
+    const entries = buildDataForMain(main);
+    const total = entries.reduce((s,e)=> s + e.value, 0) || 1;
+    const size = 200; const cx = size/2, cy = size/2, r = size*0.35;
+    const svg = el('svg',{width:size,height:size,viewBox:`0 0 ${size} ${size}`});
+    let acc = 0; const colors = ['#60a5fa','#34d399','#facc15','#fb7185','#a78bfa','#fb923c'];
+    function polar(a){ const rad=(a-90)*Math.PI/180; return {x: cx + r*Math.cos(rad), y: cy + r*Math.sin(rad)} }
+    function arc(start,end){ const s = polar(end); const e = polar(start); const large = (end-start)<=180 ? 0 : 1; return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 0 ${e.x} ${e.y} L ${cx} ${cy} Z`; }
+    if(entries.length === 0){ svg.appendChild(el('circle',{cx,cy,r,fill:'#f1f5f9'})); svg.appendChild(el('text',{x:cx,y:cy,'text-anchor':'middle','font-size':'12',fill:'#64748b'}, 'No data')); }
+    else {
+      const animPaths = [];
+      entries.forEach((en,i)=>{
+        const start = (acc/total)*360; acc += en.value; const end = (acc/total)*360; const d = arc(start,end);
+        const path = el('path',{d, fill: colors[i%colors.length], stroke:'#fff','stroke-width':1, style:'cursor:pointer'});
+        path.addEventListener('pointerenter', ()=>{ path.setAttribute('stroke','#111'); path.setAttribute('stroke-width','2'); });
+        path.addEventListener('pointerleave', ()=>{ path.setAttribute('stroke','#fff'); path.setAttribute('stroke-width','1'); });
+        path.addEventListener('click', ()=>{ currentPieFilter = (currentPieFilter === en.name) ? null : en.name; routeRender(); });
+        path.style.transformOrigin = `${cx}px ${cy}px`;
+        path.style.transform = 'scale(0.05)';
+        path.style.opacity = '0';
+        path.style.transition = 'transform 600ms cubic-bezier(.2,.8,.2,1), opacity 300ms ease';
+        svg.appendChild(path);
+        animPaths.push({path, index:i});
+      });
+      requestAnimationFrame(()=>{ animPaths.forEach((pObj, idx)=>{ setTimeout(()=>{ pObj.path.style.transform = 'scale(1)'; pObj.path.style.opacity = '1'; }, 120 + idx * 80); }); });
+    }
+    svg.appendChild(el('circle',{cx,cy,r: r*0.5, fill:'#fff'}));
+    svg.appendChild(el('text',{x:cx,y:cy-6,'text-anchor':'middle','font-size':'12','font-weight':'600'}, main));
+    svg.appendChild(el('text',{x:cx,y:cy+12,'text-anchor':'middle','font-size':'10',fill:'#475569'}, `${entries.reduce((s,e)=>s+e.value,0)} qty`));
+    const legend = el('div',{class:'flex flex-col gap-1'});
+    entries.forEach((en,i)=>{ const label = en.name === main ? main : en.name.replace(main + ' / ', ''); const pct = total ? (en.value/total*100) : 0; const row = el('div',{class:'flex items-center gap-2 whitespace-nowrap'}, [ el('button',{class:'w-3 h-3', style:`background:${colors[i%colors.length]};border-radius:4px`, onclick:()=>{ currentPieFilter = (currentPieFilter === en.name) ? null : en.name; routeRender(); }}, ''), el('div',{class:'text-sm'}, label), el('div',{class:'text-xs text-slate-500 ml-2'}, `${en.value} (${pct.toFixed(1)}%)`) ]); legend.appendChild(row); });
+    const box = el('div',{class:'flex items-start gap-3'}, [ el('div',{class:'p-2 bg-white rounded shadow'}, svg), legend ]);
+    return box;
+  }
+
+  const piesContainer = el('div',{class:'flex flex-col md:flex-row items-start gap- 07'}, [ renderSinglePie('A'), renderSinglePie('B') ]);
+  const clearBtn = currentPieFilter ? el('div',{class:'flex items-start md:items-center'}, el('button',{class:'px-3 py-1 text-sm border rounded', onclick:()=>{ currentPieFilter = null; routeRender(); }}, 'Clear filter')) : null;
+  const wrapper = el('div',{class:'flex flex-col md:flex-row md:items-start md:justify-between gap-4'}, [ piesContainer, clearBtn ]);
+  return wrapper;
+}
+
+function renderItemsBar(){ const items = state.items.filter(i=> !currentPieFilter || i.category === currentPieFilter).slice().sort((a,b)=>b.qty-a.qty).slice(0,20); const max = Math.max(1, ...items.map(i=>Number(i.qty||0))); const cont = el('div',{class:'no-pop'});
+  if(currentPieFilter) cont.appendChild(el('div',{class:'text-sm text-slate-600 mb-2'}, `Showing items in category: ${currentPieFilter}`));
+  if(items.length===0) cont.appendChild(el('div',{class:'text-sm text-slate-500'}, '-- no items to display --'));
+  items.forEach(it=>{ const w = Math.round((it.qty/max)*160); cont.appendChild(el('div',{class:'flex items-center gap-3 mb-2'}, [ el('div',{class:'flex-1 text-sm'}, it.name), el('div',{class:'h-3 rounded', style:`width:${w}px;background:#bbf7d0`}), el('div',{}, String(it.qty)) ])); }); return cont; }
+
+// Quick Entry (category-specific)
+function renderQuickForCategory(catName){
+  const container = el('div',{});
+  let selSub = catName; let selItem = ''; let amt = 1; let note = '';
+  function getSubcategories(){ const prefix = catName + ' / '; const subs = (state.categories||[]).filter(c=> c === catName || c.startsWith(prefix)); const ordered = [catName, ...subs.filter(s=> s !== catName)]; return Array.from(new Set(ordered)); }
+  function updateItemsForSub(){ const itemSelect = container.querySelector('select.item-select'); if (!itemSelect) return; itemSelect.innerHTML = ''; if (selSub === catName) { itemSelect.appendChild(el('option', { value: '' }, '-- (select subcategory)')); selItem = ''; return; } const list = state.items.filter(i => i.category === selSub); if (list.length === 0) { itemSelect.appendChild(el('option', { value: '' }, '-- no items --')); selItem = ''; return; } list.forEach(i => itemSelect.appendChild(el('option',{ value: i.id }, `${i.name} — ${i.qty} ${i.unit} (${i.location || '-'})`))); selItem = ''; itemSelect.value = ''; }
+  function updateSubSelect(){ const subSelect = container.querySelector('select.sub-select'); if(!subSelect) return; subSelect.innerHTML = ''; const subs = getSubcategories(); subs.forEach(s=> subSelect.appendChild(el('option',{value:s}, s === catName ? `${s} (main)` : s.replace(catName + ' / ', '')))); const has = subs.includes(selSub); if(!has) selSub = subs[0] || catName; subSelect.value = selSub; updateItemsForSub(); }
+  const form = el('form',{onsubmit:(e)=>{ e.preventDefault(); const it = state.items.find(x=> x.id === selItem); if(!it) return alert('Select item'); const modal = el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'}, el('div',{class:'bg-white p-4 rounded w-96'}, [ el('h3',{class:'font-semibold mb-2'}, 'Confirm consumption'), el('div',{}, `Item: ${it.name}`), el('div',{}, `Amount: ${amt}`), el('div',{}, `Note: ${note||'—'}`), el('div',{class:'flex justify-end gap-2 mt-3'}, [ el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Cancel'), el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded', onclick:()=>{ recordConsumption(it.id, amt, note); modal.remove(); routeRender(); }}, 'Confirm') ]) ])); showAnimatedModal(modal); } , class:'space-y-2'}, []);
+  const subSelect = el('select',{class:'p-2 border rounded sub-select', onchange:e=>{ selSub = e.target.value; updateItemsForSub(); } });
+  const itemSelect = el('select',{class:'p-2 border rounded item-select', onchange:e=> selItem = e.target.value });
+  form.appendChild(el('div',{class:'flex gap-2'}, [ subSelect, itemSelect ]));
+  form.appendChild(el('div',{class:'flex gap-2 items-center'}, [ el('input',{type:'number', min:1, value:1, class:'w-28 p-2 border rounded', onchange:e=> amt = Number(e.target.value)}), el('input',{placeholder:'note', class:'flex-1 p-2 border rounded', onchange:e=> note = e.target.value}), el('button',{class:'px-3 py-2 bg-sky-600 text-white rounded'}, 'Record') ]));
+  container.appendChild(form);
+  function _stateListener(){ updateSubSelect(); updateItemsForSub(); }
+  document.addEventListener('statechange', _stateListener);
+  const observer = new MutationObserver(() => { if(!document.body.contains(container)){ document.removeEventListener('statechange', _stateListener); observer.disconnect(); } });
+  observer.observe(document.body, { childList: true, subtree: true });
+  updateSubSelect();
+  return container;
+}
+
+function showConfirm(it,amt,note){ const modal = el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'}, el('div',{class:'bg-white p-4 rounded w-96'}, [ el('h3',{class:'font-semibold mb-2'}, 'Confirm consumption'), el('div',{}, `Item: ${it.name}`), el('div',{}, `Amount: ${amt}`), el('div',{}, `Note: ${note||'—'}`), el('div',{class:'flex justify-end gap-2 mt-3'}, [ el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Cancel'), el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded', onclick:()=>{ recordConsumption(it.id, amt, note); modal.remove(); routeRender(); }}, 'Confirm') ]) ])); showAnimatedModal(modal); }
+
+/* Recent activity renderer accepts optional limit (null => all) */
+function renderRecentActivity(limit=null){
+  const entries = state.items.flatMap(i=>(i.history||[]).map(h=>({...h,itemName:i.name,itemId:i.id}))).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const cont = el('div',{});
+  if(entries.length===0) { cont.appendChild(el('div',{class:'text-sm text-slate-500'}, 'No recent activity')); return cont; }
+  const list = (typeof limit === 'number') ? entries.slice(0, limit) : entries;
+  list.forEach(e=>{
+    const row = el('div',{class:'border p-2 rounded flex items-center justify-between mb-2'}, [
+      el('div',{}, [ el('div',{class:'font-medium'}, e.itemName), el('div',{class:'text-xs text-slate-500'}, new Date(e.date).toLocaleString()), el('div',{}, `${e.amount} — ${e.note}`) ]),
+      (function(){ let confirming=false; const wrapper=el('div',{}); const btn = el('button',{class:'px-2 py-1 border rounded text-sm', onclick:()=>{ if(!confirming){ confirming=true; wrapper.innerHTML=''; wrapper.appendChild(el('div',{class:'flex gap-2'}, [ el('button',{class:'px-2 py-1 bg-red-600 text-white rounded text-sm', onclick:()=>{ deleteActivity(e.itemId,e.id); routeRender(); }}, 'Confirm'), el('button',{class:'px-2 py-1 border rounded text-sm', onclick:()=>{ confirming=false; routeRender(); }}, 'Cancel') ])); } }}, 'Edit'); wrapper.appendChild(btn); return wrapper; })()
+    ]);
+    cont.appendChild(row);
+  });
+  return cont;
+}
+
+/* Activities page (paginated) */
+function renderAllActivities(page=1, perPage=20){
+  clear(app);
+  const all = state.items.flatMap(i=>(i.history||[]).map(h=>({...h,itemName:i.name,itemId:i.id}))).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const total = all.length;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  if(page < 1) page = 1;
+  if(page > totalPages) page = totalPages;
+  const start = (page-1)*perPage;
+  const pageItems = all.slice(start, start + perPage);
+
+  const container = el('div',{});
+  container.appendChild(el('div',{class:'flex items-center justify-between'}, [ el('h2',{class:'text-xl font-semibold'}, `Activities — Page ${page} of ${totalPages}`), el('div',{}, [ el('a',{href:'#/', class:'text-sky-600 text-sm'}, '← Home') ]) ]));
+
+  const listWrapper = el('div',{class:'bg-white p-4 rounded shadow mt-4'});
+  if(pageItems.length === 0) listWrapper.appendChild(el('div',{class:'text-sm text-slate-500'}, '-- no activity --'));
+  else pageItems.forEach(e=>{
+    const row = el('div',{class:'border p-2 rounded flex items-center justify-between mb-2'}, [
+      el('div',{}, [ el('div',{class:'font-medium'}, e.itemName), el('div',{class:'text-xs text-slate-500'}, new Date(e.date).toLocaleString()), el('div',{}, `${e.amount} — ${e.note}`) ]),
+      (function(){ let confirming=false; const wrapper=el('div',{}); const btn = el('button',{class:'px-2 py-1 border rounded text-sm', onclick:()=>{ if(!confirming){ confirming=true; wrapper.innerHTML=''; wrapper.appendChild(el('div',{class:'flex gap-2'}, [ el('button',{class:'px-2 py-1 bg-red-600 text-white rounded text-sm', onclick:()=>{ deleteActivity(e.itemId,e.id); routeRender(); }}, 'Confirm'), el('button',{class:'px-2 py-1 border rounded text-sm', onclick:()=>{ confirming=false; routeRender(); }}, 'Cancel') ])); } }}, 'Edit'); wrapper.appendChild(btn); return wrapper; })()
+    ]);
+    listWrapper.appendChild(row);
+  });
+
+  // paging controls
+  const paging = el('div',{class:'flex items-center justify-between mt-4'}, [
+    el('div',{}, [
+      el('button',{class:'px-3 py-1 border rounded mr-2', onclick:()=>{ location.hash = '#/activities?page=' + Math.max(1, page-1); }}, 'Prev'),
+      el('button',{class:'px-3 py-1 border rounded', onclick:()=>{ location.hash = '#/activities?page=' + Math.min(totalPages, page+1); }}, 'Next')
+    ]),
+    el('div',{}, [
+      el('span',{class:'text-sm text-slate-500 mr-3'}, `${total} total entries`),
+      el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded text-sm', onclick:()=>{ // export current page as CSV
+        const rows = pageItems.map(r=>({date:r.date, item:r.itemName, amount:r.amount, note:r.note}));
+        const csv = Papa.unparse(rows);
+        const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `activities_page_${page}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      }}, 'Export page CSV')
+    ])
+  ]);
+
+  container.appendChild(listWrapper);
+  container.appendChild(paging);
+  app.appendChild(container);
+  renderUndo();
+}
+
+/* Category / item pages (unchanged) */
+function renderCategory(name){
+  clear(app);
+  const decoded = name||'';
+  const items = state.items.filter(i=>i.category===decoded);
+  const cont = el('div',{});
+  cont.appendChild(el('div',{class:'flex items-center justify-between'}, [ el('h2',{class:'text-xl font-semibold'}, `Category: ${decoded}`), el('a',{href:'#/categories', class:'text-sky-600'}, 'Back') ]));
+  const grid = el('div',{class:'grid md:grid-cols-2 gap-4 mt-4'});
+  const left = el('div',{class:'bg-white p-4 rounded shadow no-pop'}, [ el('h3',{class:'font-medium mb-2'}, 'Items'), (function(){
+    const tbl = el('table',{class:'w-full text-sm'});
+    const thead = el('thead',{}, el('tr',{}, [ el('th',{class:'p-2 text-left'}, 'Name'), el('th',{class:'p-2'}, 'Location'), el('th',{class:'p-2'}, 'Qty'), el('th',{class:'p-2'}, 'Unit'), el('th',{class:'p-2'}, 'Actions') ]));
+    const tbody = el('tbody',{});
+
+    items.forEach(it=>{
+      const actions = el('div',{class:'flex items-center justify-center gap-2'});
+      const histBtn = el('button',{class:'px-2 py-1 border rounded text-sm', onclick:()=> openHistory(it.id)}, 'History');
+      const editBtn = el('button',{class:'px-2 py-1 border rounded text-sm', onclick:()=> openEditItem(it)}, 'Edit');
+      actions.appendChild(histBtn);
+      actions.appendChild(editBtn);
+
+      const tr = el('tr',{class:'border-b'}, [
+        el('td',{class:'py-2'}, it.name),
+        el('td',{class:'py-2 text-center'}, it.location || ''),
+        el('td',{class:'py-2 text-center'}, String(it.qty)),
+        el('td',{class:'py-2 text-center'}, it.unit),
+        el('td',{class:'py-2 text-center'}, actions)
+      ]);
+      tbody.appendChild(tr);
+    });
+
+    tbl.appendChild(thead);
+    tbl.appendChild(tbody);
+    return tbl;
+  })() ]);
+
+  // right: add/update form (keeps existing functionality)
+  const right = el('div',{class:'bg-white p-4 rounded shadow no-pop'}, [ el('h3',{class:'font-medium mb-2'}, 'Add / Update'), (function(){
+    const form = el('form',{onsubmit:(e)=>{ e.preventDefault(); if(mode.value==='new'){ if(!newName.value) return alert('Enter name'); addItem({id:uid(),name:newName.value.trim(),category:decoded,qty:Number(newQty.value||0),unit:newUnit.value,location: (newLocation && newLocation.value) ? newLocation.value : '', history:[]}); newName.value=''; newQty.value=0; newUnit.value='Meter'; if(newLocation) newLocation.value=''; routeRender(); } else { if(!selectedId.value) return alert('Select item'); showAddConfirm(); } }});
+
+    const mode = el('select',{class:'p-2 border rounded', onchange:()=> renderFields()}, [ el('option',{value:'new'}, 'Create new item'), el('option',{value:'existing'}, 'Add to existing') ]);
+    const newName=el('input',{placeholder:'Item name', class:'w-full p-2 border rounded'});
+    const newQty=el('input',{type:'number', class:'w-28 p-2 border rounded'});
+    const newUnit = el('select',{class:'w-28 p-2 border rounded'}, [ el('option',{value:'Meter'}, 'Meter'), el('option',{value:'NO'}, 'NO') ]);
+    const newLocation = el('input',{class:'w-36 p-2 border rounded', placeholder:'Storage location (e.g., Rack 1)'});
+    const selectedId=el('select',{class:'w-full p-2 border rounded mt-2'}, [ el('option',{value:''}, '-- select --') ]);
+    items.forEach(it=> selectedId.appendChild(el('option',{value:it.id}, `${it.name} — ${it.qty}`)));
+    const addQty=el('input',{type:'number', value:1, class:'w-28 p-2 border rounded'});
+    const btn=el('button',{class:'px-3 py-2 bg-sky-600 text-white rounded mt-2'}, 'Create');
+
+    form.appendChild(el('div',{}, [ el('label',{}, 'Mode: '), mode ]));
+    form.appendChild(el('div',{id:'fields', class:'mt-2'}));
+    form.appendChild(btn);
+
+    function renderFields(){ const f=form.querySelector('#fields'); f.innerHTML = ''; if(mode.value==='new'){ f.appendChild(newName); f.appendChild(el('div',{class:'flex gap-2 mt-2'}, [ newQty, newUnit, newLocation ])); btn.textContent='Create'; } else { f.appendChild(selectedId); f.appendChild(el('div',{class:'flex gap-2 mt-2 items-center'}, [ addQty, el('div',{class:'text-sm text-slate-500'}, 'Add quantity') ])); btn.textContent='Add quantity'; } }
+    renderFields();
+
+    function showAddConfirm(){ const it = state.items.find(x=>x.id===selectedId.value); if(!it) return; const modal = el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'}, el('div',{class:'bg-white p-4 rounded w-96'}, [ el('h3',{class:'font-semibold mb-2'}, 'Confirm add stock'), el('div',{}, `Add ${addQty.value} units to ${it.name}`), el('div',{class:'flex justify-end gap-2 mt-3'}, [ el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Cancel'), el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded', onclick:()=>{ updateItem(it.id,{ qty: Number(it.qty||0) + Number(addQty.value||0), history:[ {id:uid(),date:new Date().toISOString(),amount:Number(addQty.value||0),note:'Stock added'} , ...(it.history||[])] }); modal.remove(); routeRender(); }}, 'Confirm') ]) ])); showAnimatedModal(modal); }
+
+    return form; })() ]);
+
+  grid.appendChild(left); grid.appendChild(right); cont.appendChild(grid); app.appendChild(cont); renderUndo();
+
+  // history modal
+  function openHistory(id){ const it = state.items.find(x=>x.id===id); if(!it) return; let histFrom='', histTo=''; const modal = el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'}, el('div',{class:'bg-white p-4 rounded w-96 max-h-[70vh] overflow-auto'}, [ el('button',{class:'absolute right-2 top-2 text-slate-500 hover:text-black', onclick:()=> modal.remove()}, '✕'), el('h3',{class:'font-semibold mb-2 mt-6'}, `History for ${it.name}`), el('div',{class:'text-sm font-medium mb-3 text-slate-700'}, `Total Qty Available: ${it.qty}`), el('div',{class:'flex gap-2 items-center mb-3'}, [ el('div',{class:'flex items-center gap-1'}, [ el('label',{class:'text-xs'}, 'From'), el('input',{type:'date', class:'p-1 border rounded text-xs ml-1', onchange:e=> histFrom=e.target.value }) ]), el('div',{class:'flex items-center gap-1'}, [ el('label',{class:'text-xs'}, 'To'), el('input',{type:'date', class:'p-1 border rounded text-xs ml-1', onchange:e=> histTo=e.target.value }) ]), el('button',{class:'ml-auto px-2 py-1 bg-sky-600 text-white text-xs rounded', onclick:()=>{ const rows = (it.history||[]).slice().sort((a,b)=>new Date(a.date)-new Date(b.date)).map(h=>({date:new Date(h.date).toISOString().slice(0,10), amount:(h.note==='Stock added'? ('+'+h.amount):('-'+h.amount)), note:h.note})); const csv = Papa.unparse(rows); const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=it.name.replaceAll(' ','_') + '_history.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); } }, 'Export CSV') ]), el('div',{class:'space-y-2 text-sm text-slate-700'}, (it.history||[]).slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).filter(h=>{ if(histFrom && new Date(h.date) < new Date(histFrom)) return false; if(histTo){ const dayEnd=new Date(histTo); dayEnd.setDate(dayEnd.getDate()+1); if(new Date(h.date) >= dayEnd) return false; } return true; }).map(h=> el('div',{class:'border-b py-2 ' + (h.note==='Stock added' ? 'bg-green-50' : 'bg-red-50')}, [ el('div',{class:'text-xs text-slate-500'}, new Date(h.date).toLocaleString()), el('div',{class:'font-medium'}, (h.note==='Stock added' ? 'Added' : 'Consumed') + ': ' + h.amount), el('div',{class:'text-xs text-slate-600'}, h.note) ]) ) ), el('div',{class:'flex justify-end mt-3'}, el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Close')) ])); showAnimatedModal(modal); }
+
+  // edit modal for items
+  function openEditItem(it){
+    const modal = el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'}, el('div',{class:'bg-white p-4 rounded w-96'}, [
+      el('button',{class:'absolute right-2 top-2 text-slate-500 hover:text-black', onclick:()=> modal.remove()}, '✕'),
+      el('h3',{class:'font-semibold mb-2 mt-2'}, `Edit item: ${it.name}`),
+      el('div',{class:'space-y-2'}, [
+        el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Name'), el('input',{class:'w-full p-2 border rounded', value:it.name, id:'edit-name'}) ]),
+        el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Location'), el('input',{class:'w-full p-2 border rounded', value:it.location || '', id:'edit-location'}) ]),
+        el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Qty'), el('input',{type:'number', class:'w-36 p-2 border rounded', value:it.qty, id:'edit-qty'}) ]),
+        el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Unit'), el('select',{class:'w-36 p-2 border rounded', id:'edit-unit'}, [ el('option',{value:'Meter'}, 'Meter'), el('option',{value:'NO'}, 'NO') ]) ]),
+        el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Category / Subcategory'), el('select',{class:'w-full p-2 border rounded', id:'edit-category'}, state.categories.map(c=> el('option',{value:c}, c))) ])
+      ]),
+      el('div',{class:'flex justify-end gap-2 mt-3'}, [ el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Cancel'), el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded', onclick:()=>{ const name = modal.querySelector('#edit-name').value.trim(); const loc = modal.querySelector('#edit-location').value.trim(); const qty = Number(modal.querySelector('#edit-qty').value||0); const unit = modal.querySelector('#edit-unit').value; const cat = modal.querySelector('#edit-category').value; if(!name) return alert('Name required'); updateItem(it.id, { name, location:loc, qty, unit, category:cat }); modal.remove(); routeRender(); }}, 'Save') ])
+    ]));
+    showAnimatedModal(modal);
+    setTimeout(()=>{ try{ modal.querySelector('#edit-unit').value = it.unit || 'Meter'; modal.querySelector('#edit-category').value = it.category || decoded; }catch(e){} }, 20);
+  }
+}
+
+function renderCategories(){
+  clear(app);
+  const cont = el('div',{});
+
+  // Top: Special Category boxes A & B
+  const catBoxContainer = el('div',{class:'grid md:grid-cols-2 gap-4'}, []);
+  ['A','B'].forEach(name=>{
+    const itemCount = state.items.filter(it => it.category === name).length;
+
+    const subPrefix = name + ' / ';
+    const subcats = (state.categories||[]).filter(c => c.startsWith(subPrefix));
+
+    const subList = el('ul',{class:'mt-3 space-y-2 text-sm'});
+    if(subcats.length === 0){
+      subList.appendChild(el('li',{class:'text-slate-500'}, 'No subcategories'));
+    } else {
+      subcats.forEach(sc => {
+        const scCount = state.items.filter(it => it.category === sc).length;
+        const scRow = el('li',{class:'flex items-center justify-between'}, [
+          el('div', {class: 'flex items-center gap-3'}, [ el('a',{href:'#/category/'+encodeURIComponent(sc), class:'text-sky-600'}, sc.replace(subPrefix, '')), el('div',{class:'text-xs text-slate-500'}, `${scCount} items`) ]),
+          el('div', {class: 'flex items-center gap-2'}, [ el('button',{class:'px-2 py-1 border rounded text-sm', onclick: ()=> showRename(sc) }, 'Rename') ])
+        ]);
+        subList.appendChild(scRow);
+      });
+    }
+
+    const box = el('div',{class:'bg-white p-4 rounded shadow flex flex-col justify-between'},[
+      el('div',{}, [ el('h3',{class:'font-semibold mb-2'}, `Category ${name}`), el('div',{class:'text-sm text-slate-500 mb-2'}, `${itemCount} items`), subList ]),
+      (function(){
+        const wrap = el('form',{class:'flex gap-2 mt-3', onsubmit:(e)=>{ e.preventDefault(); const v = input.value.trim(); if(!v) return; const newName = name + ' / ' + v; addCategory(newName); input.value=''; routeRender(); }},[]);
+        const input = el('input',{class:'flex-1 p-2 border rounded', placeholder:`New subcategory under ${name}`});
+        wrap.appendChild(input);
+        wrap.appendChild(el('button',{class:'px-3 py-2 bg-green-600 text-white rounded'},'Create'));
+        return wrap;
+      })()
+    ]);
+    catBoxContainer.appendChild(box);
+  });
+  cont.appendChild(catBoxContainer);
+
+  app.appendChild(cont); renderUndo();
+
+  function showRename(c){ const modal = el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'}, el('div',{class:'bg-white p-4 rounded w-96'}, [ el('h3',{class:'font-semibold mb-2'}, 'Rename category'), el('div',{}, `Renaming: ${c}`), el('input',{class:'w-full p-2 border rounded my-2', value:c, id:'rn'}), el('div',{class:'flex justify-end gap-2'}, [ el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Cancel'), el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded', onclick:()=>{ const v = modal.querySelector('#rn').value.trim(); if(v) { editCategory(c,v); modal.remove(); routeRender(); } }}, 'Save') ]) ])); showAnimatedModal(modal); }
+
+}
+
+/* Sync page */
+function renderSync(){ clear(app); const cont = el('div',{}); cont.appendChild(el('div',{class:'bg-white p-4 rounded shadow no-pop'}, [ el('h2',{class:'text-lg font-semibold'}, 'Sync'), el('div',{class:'mt-3 flex gap-2 items-center'}, [ el('button',{class:'px-3 py-2 bg-indigo-600 text-white rounded', onclick:exportExcel}, 'Export Excel (Stocks + Histories)'), el('input',{type:'file', onchange:e=>{ const f=e.target.files[0]; if(!f) return; importCSV(f).then(n=>{ alert('Imported '+n); routeRender(); }).catch(err=>alert('Import failed: '+err)); }, class:'ml-2'}) ]) ])); app.appendChild(cont); }
+
+/* small UI helpers & modal styles */
+function injectModalStyles(){ if(document.getElementById('modal-styles')) return; const s=document.createElement('style'); s.id='modal-styles'; s.textContent = `
+nav a { transition: background 120ms ease; }
+nav a:hover { background: rgba(59,130,246,0.10); }
+* { transform: none !important; box-shadow: none !important; }
+`; document.head.appendChild(s); }
+function injectHoverStyles(){ if(document.getElementById('hover-styles')) return; const s=document.createElement('style'); s.id='hover-styles'; s.textContent = `
+.no-pop *, .no-pop *:hover { transform:none!important; box-shadow:none!important; transition:none!important; }
+button, li { transition: transform 120ms ease, box-shadow 120ms ease; }
+button:hover:not(.no-pop), li:hover:not(.no-pop) { transform: translateY(-2px) scale(1.01); box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
+nav a:not(.no-pop)(.no-pop), .bg-white ul li:not(.no-pop), table tr:not(.no-pop), .bg-white .flex.items-center:not(.no-pop), .bg-white .p-4 > div:not(.no-pop), .bg-white .p-2 > div:not(.no-pop), .p-2.bg-white.rounded.shadow, .bg-white .rounded.shadow, .flex.items-center > button, .flex.items-center > div { transition: transform 180ms ease, box-shadow 180ms ease; will-change: transform; }
+nav a:hover, .bg-white ul li:hover, table tr:hover, .bg-white .flex.items-center:hover, .bg-white .p-4 > div:hover, .bg-white .p-2 > div:hover, .p-2.bg-white.rounded.shadow:hover, .bg-white .rounded.shadow:hover, .flex.items-center > button:hover, .flex.items-center > div:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 10px 24px rgba(2,6,23,0.08); z-index:10; }
+nav a { display:inline-block; padding:4px 6px; border-radius:6px; }
+nav a:hover { background: rgba(59,130,246,0.06); }
+table tr:hover td { background: rgba(15,23,42,0.02); }
+`; document.head.appendChild(s); }
+function showAnimatedModal(modal){ injectModalStyles(); modal.classList.add('modal-backdrop'); const content = modal.querySelector('div'); if(content) content.classList.add('modal-content'); document.body.appendChild(modal); requestAnimationFrame(()=> modal.classList.add('open')); const originalRemove = modal.remove.bind(modal); modal.remove = ()=>{ modal.classList.remove('open'); setTimeout(()=> originalRemove(), 260); }; }
+
+/* start */
+injectModalStyles();
+injectHoverStyles();
+routeRender();
+</script>
+</body>
+</html>
