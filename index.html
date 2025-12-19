@@ -5,88 +5,422 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Inventory Manager — EMD</title>
 
-<!-- Tailwind via CDN (for quick prototype) -->
 <script src="https://cdn.tailwindcss.com"></script>
-<!-- PapaParse for CSV import/export -->
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<!-- SheetJS (xlsx) to create multi-sheet Excel files in browser -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
+
 <body class="min-h-screen bg-slate-50 text-slate-900">
+<!-- ================= LOGIN PAGE ================= -->
+<div
+  id="loginPage"
+  class="min-h-screen flex items-center justify-center bg-slate-100 px-6"
+>
+  <!-- Container -->
+ <div class="flex flex-col md:flex-row items-center gap-14 bg-white rounded-xl shadow-xl p-12 max-w-6xl w-full">
+
+    <!-- LEFT: Illustration -->
+    <div class="md:w-1/2 flex justify-center">
+      <img
+        src="login-illustration.png"
+        alt="Inventory illustration"
+        class="max-w-full h-auto"
+      />
+    </div>
+
+    <!-- RIGHT: Login box -->
+    <div class="md:w-1/2 w-full max-w-sm">
+
+      <h1 class="text-2xl font-bold mb-1 text-center">
+        Inventory Manager
+      </h1>
+
+      <p class="text-sm text-slate-500 mb-6 text-center">
+        created by Amit Nayak
+      </p>
+
+      <input
+        id="loginPassword"
+        type="password"
+        placeholder="Enter admin password"
+        class="w-full border px-4 py-2 rounded mb-4"
+      />
+
+      <button
+        id="loginSubmit"
+        class="w-full py-2 bg-slate-800 text-white rounded"
+      >
+        Login
+      </button>
+
+      <p
+        id="loginError"
+        class="text-red-600 text-sm mt-3 hidden text-center"
+      >
+        Wrong password
+      </p>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ================= MAIN APP ================= -->
+<div id="appShell" class="hidden">
   <div class="max-w-5xl mx-auto p-6">
+
     <header class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-2xl font-bold">Inventory Manager</h1>
         <div class="text-sm text-slate-500">Created by Amit Nayak</div>
       </div>
-      <nav class="flex items-center gap-3 text-sky-600">
-        <a href="#/">Home</a>
-        <a href="#/categories">Inventories</a>
-        <a href="#/sync">Export Data</a>
-        <a href="#/activities">Log History </a>
-      </nav>
+
+      <div class="flex items-center gap-4">
+        <nav class="flex items-center gap-3 text-sky-600">
+          <a href="#/">Home</a>
+          <a href="#/categories">Inventories</a>
+          <a href="#/sync">Export Data</a>
+          <a href="#/activities">Log History</a>
+        </nav>
+
+        <button id="logoutBtn"
+          class="px-3 py-1 bg-red-600 text-white rounded">
+          Logout
+        </button>
+      </div>
     </header>
 
     <main id="app" class="space-y-6"></main>
 
-    <footer class="mt-8 text-sm text-slate-600">Saved to localStorage (key: <code class="bg-slate-100 px-1 rounded">inventory_v1</code>)</footer>
+    <footer class="mt-8 text-sm text-slate-600">
+      Synced with Google Sheets
+    </footer>
   </div>
-
+</div>
 <script>
-/* Single-file inventory app (Tailwind UI classes) */
-const STORAGE_KEY = 'inventory_v1';
-const uid = ()=> Math.random().toString(36).slice(2,9);
+/* ===== UI STYLE HELPERS (MUST BE BEFORE LOGIN SCRIPT) ===== */
+function injectHoverStyles(){
+  if(document.getElementById('hover-styles')) return;
+  const s=document.createElement('style');
+  s.id='hover-styles';
+  s.textContent = `
+    .no-pop *, .no-pop *:hover { transform:none!important; box-shadow:none!important; transition:none!important; }
+    button, li { transition: transform 120ms ease, box-shadow 120ms ease; }
+    button:hover:not(.no-pop), li:hover:not(.no-pop) {
+      transform: translateY(-2px) scale(1.01);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+    }
+  `;
+  document.head.appendChild(s);
+}
+</script>
+<script>
+/* ================= GOOGLE SHEET SYNC ================= */
+const API_URL = 'https://script.google.com/macros/s/AKfycbyAaHK0qLfJnq7cWF2jV4E4zaFK465uD4SWSicPLXN3j7DbAJXjExqZ_BRU1etPEqCa/exec';
 
-// small default
-const DEFAULT = {
-  categories:['A','B'],
-  items:[
-    {id:uid(), name:'amit (kg)', category:'A', qty:20, unit:'Meter', location:'Shelf 1', history:[]}
-  ]
+let sheetLoaded = false;
+let appReady = false;
+
+// In-memory state (shared)
+let state = {
+  categories: ['A', 'B'],
+  items: []
 };
-const EXPORT_EXCLUDE_IDS = new Set(['3vnrdby','cd3i0ym','eqz0ke3']);
+const EXPORT_EXCLUDE_IDS = new Set();
+// 🔑 SAVE FULL STATE TO GOOGLE SHEET (FORM POST – NO CORS)
+async function saveToSheet(data) {
+  if (!appReady) return;
 
-function sanitizeSheetName(name) {
-  if (!name) name = 'Sheet';
-  let clean = String(name).replace(/[:\\\/\?\*\[\]]/g, ' ');
-  clean = clean.slice(0,31);
-  if (!clean.trim()) clean = 'Sheet';
-  return clean;
+  try {
+    const formData = new URLSearchParams();
+    formData.append('data', JSON.stringify(data));
+
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      body: formData   // ⚠️ NO headers (prevents CORS)
+    });
+
+    const text = await res.text();
+    console.log('✅ Saved to Google Sheet:', text);
+
+  } catch (err) {
+    console.error('❌ Failed to save data to Google Sheet', err);
+    alert('Failed to save data to Google Sheet');
+  }
 }
 
-function load(){ try{ const s = localStorage.getItem(STORAGE_KEY); const parsed = s?JSON.parse(s):JSON.parse(JSON.stringify(DEFAULT));
-    parsed.categories = (parsed.categories||[]).filter(c => c === 'A' || c === 'B' || c.startsWith('A /') || c.startsWith('B /'));
-    if(!parsed.categories.includes('A')) parsed.categories.push('A');
-    if(!parsed.categories.includes('B')) parsed.categories.push('B');
-    parsed.items = (parsed.items||[]).map(it => { if(it.category === 'A' || it.category === 'B' || (typeof it.category === 'string' && (it.category.startsWith('A /') || it.category.startsWith('B /')))) return it; return {...it, category: 'A'}; });
-    parsed.items = parsed.items.map(it => ({ ...it, location: it.location || '' }));
-    return parsed; }catch(e){console.error(e);return JSON.parse(JSON.stringify(DEFAULT))} }
+</script>
+<script>
+// Load data from Google Sheet
+async function loadFromSheet() {
+  console.log('🔄 Loading from Google Sheet...');
+  if (sheetLoaded) return;
+  sheetLoaded = true;
 
-function save(d){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }catch(e){console.error(e);} }
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
 
-let state = load();
+    if (!data || !Array.isArray(data.items)) {
+      throw new Error('Invalid sheet data');
+    }
+
+    state = data;
+
+    // Safety
+    if (!state.categories.includes('A')) state.categories.push('A');
+    if (!state.categories.includes('B')) state.categories.push('B');
+
+    appReady = true;
+
+    routeRender();
+    document.dispatchEvent(new CustomEvent('statechange'));
+  } catch (err) {
+    console.error('Failed to load from Google Sheet:', err);
+	alert('Failed to load inventory from Google Sheet');
+  }
+}
+</script>
+
+<script>
+/* ================= LOGIN SYSTEM ================= */
+const ADMIN_PASSWORD = "emd123";
+
+const loginPage = document.getElementById("loginPage");
+const appShell = document.getElementById("appShell");
+const loginInput = document.getElementById("loginPassword");
+const loginBtn = document.getElementById("loginSubmit");
+const loginError = document.getElementById("loginError");
+const logoutBtn = document.getElementById("logoutBtn");
+
+function showLogin() {
+  loginPage.classList.remove("hidden");
+  appShell.classList.add("hidden");
+}
+
+function showApp() {
+  loginPage.classList.add("hidden");
+  appShell.classList.remove("hidden");
+}
+
+function isLoggedIn() {
+  return localStorage.getItem("isAdmin") === "true";
+}
+
+function requireAdmin() {
+  if (!isLoggedIn()) {
+    alert("Admin login required");
+    showLogin();
+    return false;
+  }
+  return true;
+}
+
+loginBtn.onclick = doLogin;
+
+function doLogin() {
+  if (loginInput.value === ADMIN_PASSWORD) {
+    localStorage.setItem("isAdmin", "true");
+    loginInput.value = "";
+    loginError.classList.add("hidden");
+
+    showApp();
+    injectHoverStyles();
+
+    sheetLoaded = false;   // 🔑 allow fresh fetch
+
+    loadFromSheet();       // 🔑 LOAD DATA FROM SHEET
+  } else {
+    loginError.classList.remove("hidden");
+  }
+}
+
+
+
+// ✅ ENTER KEY SUPPORT
+loginInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    doLogin();
+  }
+});
+
+logoutBtn.onclick = () => {
+  localStorage.removeItem("isAdmin");
+
+  sheetLoaded = false;
+  appReady = false;
+  state = { categories:['A','B'], items:[] };
+
+  showLogin();
+};
+
+
+// INITIAL LOAD (PAGE REFRESH SAFE)
+sheetLoaded = false;
+appReady = false;
+
+if (isLoggedIn()) {
+  showApp();
+  injectHoverStyles();
+
+  sheetLoaded = false;   // 🔑 RESET FLAGS ON REFRESH
+  appReady = false;
+
+  loadFromSheet();       // 🔑 FETCH FROM GOOGLE SHEET
+} else {
+  showLogin();
+}
+
+
+
+
+</script>
+
+
+
+
+<script>
+
+function cleanupMainCategoryHistory() {
+  let changed = false;
+
+  const cleanedItems = state.items.map(item => {
+    if (item.category === 'A' || item.category === 'B') {
+      if ((item.history || []).length > 0) {
+        changed = true;
+        return { ...item, history: [] };
+      }
+    }
+    return item;
+  });
+
+  if (!changed) {
+    alert('No history found for A / B items');
+    return;
+  }
+
+  state = {
+    ...state,
+    items: cleanedItems
+  };
+
+saveToSheet(state);
+routeRender();
+
+  alert('History for A and B items deleted successfully');
+}
+
 let undoTimer = null; let currentUndo = null;
 let currentPieFilter = null;
-
+let pendingBackup = null; // holds parsed backup before restore
 // NEW: recent limit state for Home
 let recentLimit = 10;
 
 function pushUndo(text,revert,timeout=6000){ currentUndo = {text,revert}; renderUndo(); if(undoTimer) clearTimeout(undoTimer); undoTimer = setTimeout(()=>{ currentUndo=null; renderUndo(); }, timeout); }
 function clearUndo(){ if(undoTimer) clearTimeout(undoTimer); undoTimer=null; currentUndo=null; renderUndo(); }
-function persist(fn){ state = fn(JSON.parse(JSON.stringify(state))); save(state); routeRender(); try{ document.dispatchEvent(new CustomEvent('statechange')); }catch(e){} }
+function persist(fn) {
+  state = fn(JSON.parse(JSON.stringify(state)));
+
+  if (appReady) {
+    saveToSheet(state);
+  } else {
+    console.warn('⏸️ Persist skipped — app not ready');
+  }
+
+  routeRender();
+  try {
+    document.dispatchEvent(new CustomEvent('statechange'));
+  } catch (e) {}
+}
+
+
 
 function addCategory(name){ if(!name) return; if(state.categories.includes(name)) return; persist(d=>({...d, categories:[...d.categories,name]})); }
 function editCategory(oldn,newn){ if(!newn||oldn===newn) return; persist(d=>({...d, categories:d.categories.map(c=>c===oldn?newn:c), items:d.items.map(it=> it.category===oldn?{...it,category:newn}:it) })); }
-function deleteCategory(name){ const snap = JSON.parse(JSON.stringify(state)); persist(d=>({...d, categories:d.categories.filter(c=>c!==name), items:d.items.map(it=> it.category===name?{...it,category:'Uncategorized'}:it)})); pushUndo('Deleted category '+name, ()=>{ state = snap; save(state); routeRender(); }); }
-function addItem(item){ item.location = item.location || ''; persist(d=>({...d, items:[item,...d.items]})); }
-function updateItem(id,patch){ persist(d=>({...d, items:d.items.map(it => it.id===id?{...it,...patch}:it)})); }
-function deleteItem(id){ const snap=JSON.parse(JSON.stringify(state)); persist(d=>({...d, items:d.items.filter(i=>i.id!==id)})); pushUndo('Deleted item', ()=>{ state=snap; save(state); routeRender(); }); }
-function recordConsumption(itemId,amount,note=''){ persist(d=>({...d, items:d.items.map(it=>{ if(it.id!==itemId) return it; const newQty=Number(it.qty)-Number(amount); const entry={id:uid(),date:new Date().toISOString(),amount:Number(amount),note}; return {...it, qty:newQty<0?0:newQty, history:[entry,...(it.history||[]) ]}; })})); }
-function deleteActivity(itemId,entryId){ const it = state.items.find(i=>i.id===itemId); if(!it) return; const entry = (it.history||[]).find(h=>h.id===entryId); if(!entry) return; persist(d=>({...d, items:d.items.map(i=> i.id===itemId?{...i, history:(i.history||[]).filter(h=>h.id!==entryId)}:i)})); pushUndo('Deleted activity', ()=>{ persist(d=>({...d, items:d.items.map(i=> i.id===itemId?{...i, history:[entry,...(i.history||[])]}:i)})); }); }
+function deleteCategory(name){ const snap = JSON.parse(JSON.stringify(state)); persist(d=>({...d, categories:d.categories.filter(c=>c!==name), items:d.items.map(it=> it.category===name?{...it,category:'Uncategorized'}:it)})); pushUndo('Deleted category '+name, ()=>{
+  state = snap;
+  saveToSheet(state);
+  routeRender();
+});
+ }
+function addItem(item){
+  if (!requireAdmin()) return;
+  item.location = item.location || '';
+  persist(d=>({...d, items:[item,...d.items]}));
+}
+function updateItem(id, patch) {
+  if (!requireAdmin()) return;
 
-// ---------- export logic (XLSX) - modified per your requests ----------
-function exportExcel(){
-  try{
+  persist(d => ({
+    ...d,
+    items: d.items.map(it => {
+      if (it.id !== id) return it;
+
+      const updated = { ...it, ...patch };
+
+      // IMPORTANT: only touch history if explicitly provided
+      if ('history' in patch) {
+        updated.history = Array.isArray(patch.history)
+          ? patch.history
+          : [];
+      }
+
+      return updated;
+    })
+  }));
+}
+
+
+function deleteItem(id){
+  if (!requireAdmin()) return;
+  const snap=JSON.parse(JSON.stringify(state));
+  persist(d=>({...d, items:d.items.filter(i=>i.id!==id)}));
+  pushUndo('Deleted item', ()=>{
+  state = snap;
+  saveToSheet(state);
+  routeRender();
+});
+
+}
+function recordConsumption(itemId, amount, note = 'Consumed') {
+  if (!requireAdmin()) return;
+
+  persist(d => ({
+    ...d,
+    items: d.items.map(it => {
+      if (it.id !== itemId) return it;
+
+      const newQty = Math.max(0, Number(it.qty) - Number(amount));
+
+      return {
+        ...it,
+        qty: newQty,
+        history: [
+          {
+            id: uid(),
+            date: new Date().toISOString(),
+            amount: Number(amount),
+            note
+          },
+          ...(it.history || [])
+        ]
+      };
+    })
+  }));
+}
+
+
+function deleteActivity(itemId,entryId){ const it = state.items.find(i=>i.id===itemId); if(!it) return; const entry = (it.history||[]).find(h=>h.id===entryId); if(!entry) return; persist(d=>({...d, items:d.items.map(i=> i.id===itemId?{...i, history:(i.history||[]).filter(h=>h.id!==entryId)}:i)})); pushUndo('Deleted activity', ()=>{ persist(d=>({...d, items:d.items.map(i=> i.id===itemId?{...i, history:[entry,...(i.history||[])]}:i)})); }); }
+function computeQtyFromHistory(item) {
+  return (item.history || []).reduce((sum, h) => {
+    if (h.note === 'Stock added') return sum + Number(h.amount || 0);
+    return sum - Number(h.amount || 0);
+  }, 0);
+}
+
+// ---------- EXPORT LOGIC (XLSX) ----------
+function exportExcel() {
+  try {
     console.log('[exportExcel] started');
 
     if (typeof XLSX === 'undefined') {
@@ -101,33 +435,48 @@ function exportExcel(){
 
     const usedNames = new Set();
     const idToSheetName = {};
-    const itemsToExport = state.items.filter(it => it && !EXPORT_EXCLUDE_IDS.has(it.id));
+    const itemsToExport = state.items.filter(
+      it => it && !EXPORT_EXCLUDE_IDS.has(it.id)
+    );
 
     // -----------------------------
     // 1) BUILD HISTORY SHEETS FIRST
-    //    (BUT DO NOT APPEND THEM YET)
     // -----------------------------
     const pendingHistorySheets = [];
 
-    itemsToExport.forEach(it => {
+   itemsToExport
+  .filter(it =>
+    typeof it.category === 'string' &&
+    (it.category.startsWith('A /') || it.category.startsWith('B /'))
+  )
+  .forEach(it => {
       try {
-        const hist = (it.history || []).slice().sort((a,b)=> new Date(a.date)-new Date(b.date));
+    const hist = Array.isArray(it.history) && it.history.length
+  ? it.history.slice().sort((a,b)=>new Date(a.date)-new Date(b.date))
+  : [];
 
-        const rows = hist.map(h=>{
+if (!hist.length) return;
+
+
+        const rows = hist.map(h => {
           let d = '';
-          try { d = new Date(h.date).toISOString().slice(0,10); }
-          catch(e){ d = String(h.date).slice(0,10); }
+          try {
+            d = new Date(h.date).toISOString().slice(0, 10);
+          } catch {
+            d = String(h.date).slice(0, 10);
+          }
 
-          const signed = (h.note === 'Stock added')
-            ? ('+' + Number(h.amount||0))
-            : ('-' + Number(h.amount||0));
+          const signed =
+            h.note === 'Stock added'
+              ? '+' + Number(h.amount || 0)
+              : '-' + Number(h.amount || 0);
 
           return [d, signed, h.note || ''];
         });
 
         const aoa = [];
-        aoa.push([it.name || 'Unnamed item']);   // A1 name
-        aoa.push(['Date','Quantity','Note']);     // Header
+        aoa.push([it.name || 'Unnamed item']);
+        aoa.push(['Date', 'Quantity', 'Note']);
         rows.forEach(r => aoa.push(r));
 
         const base = `${it.name || 'item'} history`;
@@ -136,89 +485,207 @@ function exportExcel(){
         while (usedNames.has(sheetName)) {
           const suf = ` ${n++}`;
           const avail = 31 - suf.length;
-          sheetName =
-            sanitizeSheetName(base.slice(0, avail)) + suf;
+          sheetName = sanitizeSheetName(base.slice(0, avail)) + suf;
         }
+
         usedNames.add(sheetName);
         idToSheetName[it.id] = sheetName;
 
         const ws = XLSX.utils.aoa_to_sheet(aoa);
-        ws['!cols'] = [{wpx:100},{wpx:80},{wpx:220}];
+        ws['!cols'] = [{ wpx: 100 }, { wpx: 80 }, { wpx: 220 }];
 
-        // store sheet (do NOT append yet)
         pendingHistorySheets.push({ title: sheetName, ws });
-
-      } catch(err){
+      } catch (err) {
         console.error('history sheet error', err);
       }
     });
 
     // -----------------------------
-    // 2) CREATE STOCK SHEETS (FIRST!)
+    // 2) CREATE STOCK SHEETS
     // -----------------------------
-    function buildStockRows(main){
+    function buildStockRows(main) {
       const rows = [];
-      rows.push(['Name','Qty','Unit','Location','History']);
+      rows.push(['Name', 'Qty', 'Unit', 'Location', 'Category', 'History']);
 
       state.items
-        .filter(it => it && !EXPORT_EXCLUDE_IDS.has(it.id) && belongsToMain(it, main))
-        .forEach(it=>{
+        .filter(
+          it =>
+            it &&
+            !EXPORT_EXCLUDE_IDS.has(it.id) &&
+            belongsToMain(it, main)
+        )
+        .forEach(it => {
           rows.push([
             it.name || '',
-            Number(it.qty||0),
+           Number(it.qty || 0),
             it.unit || '',
             it.location || '',
-            idToSheetName[it.id] || ''   // temporarily insert sheetName
+            it.category || main,
+            idToSheetName[it.id] || ''
           ]);
         });
+
       return rows;
     }
 
-    function appendStockSheet(title, aoaRows){
+    function appendStockSheet(title, aoaRows) {
       const ws = XLSX.utils.aoa_to_sheet(aoaRows);
-      ws['!cols'] = [{wpx:220},{wpx:80},{wpx:80},{wpx:160},{wpx:80}];
+      ws['!cols'] = [
+        { wpx: 220 },
+        { wpx: 80 },
+        { wpx: 80 },
+        { wpx: 160 },
+        { wpx: 160 },
+        { wpx: 80 }
+      ];
 
-      // Convert 5th column to hyperlinks
       const range = XLSX.utils.decode_range(ws['!ref']);
-      for(let r = range.s.r + 1; r <= range.e.r; r++){
-        const cellAddr = XLSX.utils.encode_cell({c:4, r});
+      for (let r = range.s.r + 1; r <= range.e.r; r++) {
+        const cellAddr = XLSX.utils.encode_cell({ c: 5, r });
         const cell = ws[cellAddr];
-        if(cell && typeof cell.v === 'string' && cell.v.trim()){
-          const sheetName = cell.v.replace(/'/g,"''");
-          ws[cellAddr] = {
-            t: 's',
-            f: `HYPERLINK("#'${sheetName}'!A1","History")`
-          };
+
+        if (cell && typeof cell.v === 'string' && cell.v.trim()) {
+          const sheetName = cell.v.replace(/'/g, "''");
+        ws[cellAddr] = {
+  t: 's',
+  v: 'History',
+  l: {
+    Target: `#'${sheetName}'!A1`,
+    Tooltip: 'View history'
+  }
+};
+
         } else {
-          ws[cellAddr] = { t:'s', v:'' };
+          ws[cellAddr] = { t: 's', v: '' };
         }
       }
+if (!ws['!ref']) {
+  ws['!ref'] = 'A1';
+}
 
       XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(title));
-      console.log('Appended stock sheet:', title);
     }
 
     appendStockSheet('Stocks - A', buildStockRows('A'));
     appendStockSheet('Stocks - B', buildStockRows('B'));
 
     // -----------------------------
-    // 3) APPEND HISTORY SHEETS LAST
+    // 3) APPEND HISTORY SHEETS
     // -----------------------------
     pendingHistorySheets.forEach(s =>
       XLSX.utils.book_append_sheet(wb, s.ws, s.title)
     );
 
     // -----------------------------
-    // 4) SAVE WORKBOOK
+    // 4) SAVE FILE
     // -----------------------------
-    const filename = `inventory_${Date.now()}.xlsx`;
-    XLSX.writeFile(wb, filename);
+    XLSX.writeFile(wb, `inventory_${Date.now()}.xlsx`);
     console.log('Export complete');
 
-  } catch(err){
+  } catch (err) {
     console.error('Export failed:', err);
     alert('Export failed — see console');
   }
+}
+
+
+// ---------- IMPORT LOGIC (TRUE BACKUP RESTORE) ----------
+function importExcelBackup(file) {
+  if (!requireAdmin()) return;
+
+  const reader = new FileReader();
+
+  reader.onload = (e) => {
+    const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+
+    const items = [];
+    const categories = new Set(['A', 'B']);
+
+    // ---------- READ STOCK SHEETS ----------
+    ['Stocks - A', 'Stocks - B'].forEach(sheetName => {
+      const ws = wb.Sheets[sheetName];
+      if (!ws) return;
+
+      const range = XLSX.utils.decode_range(ws['!ref']);
+
+      for (let r = range.s.r + 1; r <= range.e.r; r++) {
+        const get = c => ws[XLSX.utils.encode_cell({ c, r })];
+
+        const nameCell = get(0);
+        if (!nameCell || !nameCell.v) continue;
+
+        const qtyCell = get(1);
+        const unitCell = get(2);
+        const locCell = get(3);
+        const catCell = get(4);
+        const histCell = get(5);
+
+        let historySheet = '';
+        if (histCell && histCell.f) {
+          const m = histCell.f.match(/#'(.+?)'!/);
+          if (m) historySheet = m[1];
+        }
+
+        const category = catCell?.v || (sheetName.includes('A') ? 'A' : 'B');
+        categories.add(category);
+
+        items.push({
+          id: uid(),
+          name: String(nameCell.v),
+          qty: Number(qtyCell?.v || 0),
+          unit: unitCell?.v || '',
+          location: locCell?.v || '',
+          category,
+          historySheet,
+          history: []
+        });
+      }
+    });
+    // ---------- READ HISTORY SHEETS ----------
+   items.forEach(item => {
+  if (!item.historySheet) return;
+
+  const ws = wb.Sheets[item.historySheet];
+  if (!ws) return;
+
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+  rows.slice(2).forEach(r => {
+    if (!r[0] || !r[1]) return;
+
+    const raw = String(r[1]).trim();
+    const signed = Number(raw.replace('+', ''));
+    const isAdded = raw.startsWith('+');
+
+    item.history.push({
+  id: uid(),
+  itemId: item.id,   // 🔑 REQUIRED
+  date: new Date(r[0]).toISOString(),
+  amount: Math.abs(signed),
+  note: isAdded ? 'Stock added' : (r[2] || 'Consumed')
+});
+
+  });
+});
+
+    items.forEach(i => delete i.historySheet);
+// 🔁 Recalculate quantity from history (source of truth)
+items.forEach(item => {
+  if (item.history && item.history.length) {
+    item.qty = computeQtyFromHistory(item);
+  }
+});
+
+    // --- PREVIEW ONLY ---
+    pendingBackup = {
+      categories: Array.from(categories),
+      items
+    };
+
+    showBackupPreview(pendingBackup);
+  };
+
+  reader.readAsArrayBuffer(file);
 }
 
 
@@ -227,27 +694,127 @@ function exportExcel(){
 function exportCSV(){ exportExcel(); }
 function importCSV(file,opts={merge:true}){ return new Promise((resolve,reject)=>{ Papa.parse(file,{header:true,skipEmptyLines:true,complete:(res)=>{ const rows=res.data.map(r=>({id:r.id||uid(),name:r.name,category:r.category||'Uncategorized',qty:Number(r.qty||0),unit:r.unit||'pcs',location:r.location||'',history:[]})); persist(d=> opts.merge?({...d, categories:Array.from(new Set([...d.categories,...rows.map(r=>r.category)])), items:[...rows,...d.items]}) : ({...d, categories:Array.from(new Set(rows.map(r=>r.category))), items:rows})); resolve(rows.length); }, error:reject }); }); }
 
+function showBackupPreview(data) {
+  const totalItems = data.items.length;
+  const totalCategories = data.categories.length;
+  const totalHistory = data.items.reduce(
+    (s, i) => s + (i.history?.length || 0),
+    0
+  );
+
+  const modal = document.createElement('div');
+  modal.className =
+    'fixed inset-0 bg-black/40 flex items-center justify-center z-50';
+
+  modal.innerHTML = `
+    <div class="bg-white rounded-lg p-6 w-[520px] max-h-[80vh] overflow-auto">
+      <h2 class="text-xl font-bold mb-2">Backup Preview</h2>
+
+      <div class="text-sm text-slate-700 space-y-1 mb-4">
+        <div><b>Items:</b> ${totalItems}</div>
+        <div><b>Categories:</b> ${totalCategories}</div>
+        <div><b>History entries:</b> ${totalHistory}</div>
+      </div>
+
+      <h3 class="font-semibold mb-2">Sample items</h3>
+      <ul class="text-sm border rounded p-2 mb-4 max-h-40 overflow-auto">
+        ${data.items.slice(0, 10).map(i =>
+          `<li>• ${i.name} — ${i.qty} ${i.unit} (${i.category})</li>`
+        ).join('')}
+      </ul>
+
+      <div class="bg-yellow-50 border border-yellow-300 text-yellow-800 p-2 rounded text-sm mb-4">
+        ⚠ This will <b>overwrite all current inventory data</b>.
+      </div>
+
+      <div class="flex justify-end gap-3">
+        <button id="cancelRestore"
+          class="px-4 py-2 border rounded">
+          Cancel
+        </button>
+        <button id="confirmRestore"
+          class="px-4 py-2 bg-red-600 text-white rounded">
+          Restore Backup
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector('#cancelRestore').onclick = () => {
+    pendingBackup = null;
+    modal.remove();
+  };
+
+  modal.querySelector('#confirmRestore').onclick = () => {
+state = pendingBackup;
+
+// 🚫 Remove history from main categories A & B
+state.items = state.items.map(it => {
+  // wipe history ONLY if item is DIRECTLY in A or B (no slash)
+  if (
+    (it.category === 'A' || it.category === 'B') &&
+    (!it.category.includes('/'))
+  ) {
+    return { ...it, history: [] };
+  }
+  return it;
+});
+
+
+saveToSheet(state);
+routeRender();
+
+    pendingBackup = null;
+    modal.remove();
+    alert('Backup restored successfully');
+  };
+}
+</script>
+
+<script>
 // DOM & routing
 const app = document.getElementById('app');
-window.addEventListener('hashchange', routeRender);
-window.addEventListener('load', routeRender);
 
+window.addEventListener('hashchange', () => {
+  if (isLoggedIn() && appReady) {
+    routeRender();
+  }
+});
+
+</script>
+
+
+<script>
 if(!window.__statechange_attached){
   window.__statechange_attached = true;
   document.addEventListener('statechange', ()=>{
-    const h = (location.hash && location.hash.startsWith('#')) ? location.hash.slice(1) : (location.hash || '/');
+    const h = (location.hash && location.hash.startsWith('#'))
+      ? location.hash.slice(1)
+      : (location.hash || '/');
+
     try{
       if(h.startsWith('/categories')) renderCategories();
-      else if(h.startsWith('/category/')) { const name = decodeURIComponent(h.split('/')[2]||''); renderCategory(name); }
+      else if(h.startsWith('/category/')) {
+        const name = decodeURIComponent(h.split('/')[2]||'');
+        renderCategory(name);
+      }
       else if(h.startsWith('/sync')) renderSync();
       else if(h.startsWith('/activities')) renderAllActivities();
       else renderHome();
-    }catch(e){ routeRender(); }
+    }catch(e){
+      routeRender();
+    }
   });
 }
 
 function routeRender(){
-  const h = (location.hash && location.hash.startsWith('#')) ? location.hash.slice(1) : (location.hash || '/');
+  if (!appReady) return;   // 🔒 STOP rendering before sheet loads
+  const h = (location.hash && location.hash.startsWith('#'))
+    ? location.hash.slice(1)
+    : (location.hash || '/');
+
   if (h.startsWith('/category/')) {
     const name = decodeURIComponent(h.split('/')[2]||'');
     renderCategory(name);
@@ -264,7 +831,22 @@ function routeRender(){
     renderHome();
   }
 }
+</script>
 
+<script>
+function uid() {
+  return (
+    Date.now().toString(36) +
+    Math.random().toString(36).slice(2, 8)
+  );
+}
+function renderUndo(){ const old = document.getElementById('undo-snack'); if(old) old.remove(); if(!currentUndo) return; const box = el('div',{id:'undo-snack', class:'fixed left-6 bottom-6 bg-slate-900 text-white px-4 py-2 rounded shadow flex items-center gap-3 z-50'}, [ currentUndo.text, el('button',{class:'underline', onclick:()=>{ if(currentUndo.revert) currentUndo.revert(); clearUndo(); }},'Undo'), el('button',{class:'text-xs px-2 py-1 border rounded bg-white text-slate-900', onclick:clearUndo}, 'Dismiss') ]); document.body.appendChild(box); }
+function sanitizeSheetName(name) {
+  return String(name)
+    .replace(/[\\\/\?\*\[\]]/g, '')  // invalid Excel chars
+    .substring(0, 31)                // Excel max length
+    || 'Sheet';
+}
 /* helpers */
 function el(tag,attrs={},children=[]){ const SVG_TAGS = new Set(['svg','path','circle','rect','text','g','line','polyline','polygon','ellipse']); const SVG_NS = 'http://www.w3.org/2000/svg'; const isSvg = SVG_TAGS.has(tag);
   const d = isSvg ? document.createElementNS(SVG_NS, tag) : document.createElement(tag);
@@ -278,9 +860,55 @@ function el(tag,attrs={},children=[]){ const SVG_TAGS = new Set(['svg','path','c
   return d; }
 function clear(elm){ while(elm.firstChild) elm.removeChild(elm.firstChild); }
 
-function renderUndo(){ const old = document.getElementById('undo-snack'); if(old) old.remove(); if(!currentUndo) return; const box = el('div',{id:'undo-snack', class:'fixed left-6 bottom-6 bg-slate-900 text-white px-4 py-2 rounded shadow flex items-center gap-3 z-50'}, [ currentUndo.text, el('button',{class:'underline', onclick:()=>{ if(currentUndo.revert) currentUndo.revert(); clearUndo(); }},'Undo'), el('button',{class:'text-xs px-2 py-1 border rounded bg-white text-slate-900', onclick:clearUndo}, 'Dismiss') ]); document.body.appendChild(box); }
+
 
 /* PAGES */
+
+function renderSync() {
+  clear(app);
+
+  app.appendChild(
+    el(
+      'div',
+      {
+        class:
+          'bg-white p-6 rounded shadow grid grid-cols-1 md:grid-cols-2 gap-6 items-center'
+      },
+      [
+
+        // LEFT: Image
+        el('div', { class: 'flex justify-center' }, [
+          el('img', {
+            src: 'export-illustration.png',   // 👈 CHANGE TO YOUR IMAGE FILE NAME
+            alt: 'Export illustration',
+            class: 'max-w-full h-auto rounded'
+          })
+        ]),
+
+        // RIGHT: Export content
+        el('div', { class: 'space-y-4' }, [
+          el('h2', { class: 'text-xl font-semibold' }, 'Export Data'),
+
+          el(
+            'p',
+            { class: 'text-sm text-slate-600' },
+            'Export all items data with consumption history '
+          ),
+
+          el(
+            'button',
+            {
+              class: 'px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded shadow-sm font-semibold',
+              onclick: exportExcel
+            },
+            'Export Excel '
+          )
+        ])
+      ]
+    )
+  );
+}
+
 
 // Home now uses recentLimit and a Load more / Show less button
 function renderHome(){
@@ -381,7 +1009,12 @@ function renderCategoryPie(){
     return box;
   }
 
-  const piesContainer = el('div',{class:'flex flex-col md:flex-row items-start gap- 07'}, [ renderSinglePie('A'), renderSinglePie('B') ]);
+const piesContainer = el(
+  'div',
+  { class: 'flex flex-col md:flex-row items-start gap-7' },
+  [ renderSinglePie('A'), renderSinglePie('B') ]
+);
+
   const clearBtn = currentPieFilter ? el('div',{class:'flex items-start md:items-center'}, el('button',{class:'px-3 py-1 text-sm border rounded', onclick:()=>{ currentPieFilter = null; routeRender(); }}, 'Clear filter')) : null;
   const wrapper = el('div',{class:'flex flex-col md:flex-row md:items-start md:justify-between gap-4'}, [ piesContainer, clearBtn ]);
   return wrapper;
@@ -514,7 +1147,24 @@ function renderCategory(name){
 
   // right: add/update form (keeps existing functionality)
   const right = el('div',{class:'bg-white p-4 rounded shadow no-pop'}, [ el('h3',{class:'font-medium mb-2'}, 'Add / Update'), (function(){
-    const form = el('form',{onsubmit:(e)=>{ e.preventDefault(); if(mode.value==='new'){ if(!newName.value) return alert('Enter name'); addItem({id:uid(),name:newName.value.trim(),category:decoded,qty:Number(newQty.value||0),unit:newUnit.value,location: (newLocation && newLocation.value) ? newLocation.value : '', history:[]}); newName.value=''; newQty.value=0; newUnit.value='Meter'; if(newLocation) newLocation.value=''; routeRender(); } else { if(!selectedId.value) return alert('Select item'); showAddConfirm(); } }});
+    const form = el('form',{onsubmit:(e)=>{ e.preventDefault(); if(mode.value==='new'){ if(!newName.value) return alert('Enter name'); const initialQty = Number(newQty.value || 0);
+
+addItem({
+  id: uid(),
+  name: newName.value.trim(),
+  category: decoded,
+  qty: initialQty,
+  unit: newUnit.value,
+  location: newLocation.value || '',
+  history: initialQty > 0
+    ? [{
+        id: uid(),
+        date: new Date().toISOString(),
+        amount: initialQty,
+        note: 'Stock added'
+      }]
+    : []
+}); newName.value=''; newQty.value=0; newUnit.value='Meter'; if(newLocation) newLocation.value=''; routeRender(); } else { if(!selectedId.value) return alert('Select item'); showAddConfirm(); } }});
 
     const mode = el('select',{class:'p-2 border rounded', onchange:()=> renderFields()}, [ el('option',{value:'new'}, 'Create new item'), el('option',{value:'existing'}, 'Add to existing') ]);
     const newName=el('input',{placeholder:'Item name', class:'w-full p-2 border rounded'});
@@ -550,11 +1200,18 @@ function renderCategory(name){
       el('div',{class:'space-y-2'}, [
         el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Name'), el('input',{class:'w-full p-2 border rounded', value:it.name, id:'edit-name'}) ]),
         el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Location'), el('input',{class:'w-full p-2 border rounded', value:it.location || '', id:'edit-location'}) ]),
-        el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Qty'), el('input',{type:'number', class:'w-36 p-2 border rounded', value:it.qty, id:'edit-qty'}) ]),
+        el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Qty'), el('div',{class:'text-sm text-slate-600'}, `Current Qty: ${it.qty}`)
+ ]),
         el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Unit'), el('select',{class:'w-36 p-2 border rounded', id:'edit-unit'}, [ el('option',{value:'Meter'}, 'Meter'), el('option',{value:'NO'}, 'NO') ]) ]),
         el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Category / Subcategory'), el('select',{class:'w-full p-2 border rounded', id:'edit-category'}, state.categories.map(c=> el('option',{value:c}, c))) ])
       ]),
-      el('div',{class:'flex justify-end gap-2 mt-3'}, [ el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Cancel'), el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded', onclick:()=>{ const name = modal.querySelector('#edit-name').value.trim(); const loc = modal.querySelector('#edit-location').value.trim(); const qty = Number(modal.querySelector('#edit-qty').value||0); const unit = modal.querySelector('#edit-unit').value; const cat = modal.querySelector('#edit-category').value; if(!name) return alert('Name required'); updateItem(it.id, { name, location:loc, qty, unit, category:cat }); modal.remove(); routeRender(); }}, 'Save') ])
+      el('div',{class:'flex justify-end gap-2 mt-3'}, [ el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Cancel'), el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded', onclick:()=>{ const name = modal.querySelector('#edit-name').value.trim(); const loc = modal.querySelector('#edit-location').value.trim(); const unit = modal.querySelector('#edit-unit').value; const cat = modal.querySelector('#edit-category').value; if(!name) return alert('Name required');updateItem(it.id, { 
+  name,
+  location: loc,
+  unit,
+  category: cat
+});
+ modal.remove(); routeRender(); }}, 'Save') ])
     ]));
     showAnimatedModal(modal);
     setTimeout(()=>{ try{ modal.querySelector('#edit-unit').value = it.unit || 'Meter'; modal.querySelector('#edit-category').value = it.category || decoded; }catch(e){} }, 20);
@@ -607,31 +1264,15 @@ function renderCategories(){
 
 }
 
-/* Sync page */
-function renderSync(){ clear(app); const cont = el('div',{}); cont.appendChild(el('div',{class:'bg-white p-4 rounded shadow no-pop'}, [ el('h2',{class:'text-lg font-semibold'}, 'Sync'), el('div',{class:'mt-3 flex gap-2 items-center'}, [ el('button',{class:'px-3 py-2 bg-indigo-600 text-white rounded', onclick:exportExcel}, 'Export Excel (Stocks + Histories)'), el('input',{type:'file', onchange:e=>{ const f=e.target.files[0]; if(!f) return; importCSV(f).then(n=>{ alert('Imported '+n); routeRender(); }).catch(err=>alert('Import failed: '+err)); }, class:'ml-2'}) ]) ])); app.appendChild(cont); }
-
 /* small UI helpers & modal styles */
 function injectModalStyles(){ if(document.getElementById('modal-styles')) return; const s=document.createElement('style'); s.id='modal-styles'; s.textContent = `
 nav a { transition: background 120ms ease; }
 nav a:hover { background: rgba(59,130,246,0.10); }
 * { transform: none !important; box-shadow: none !important; }
 `; document.head.appendChild(s); }
-function injectHoverStyles(){ if(document.getElementById('hover-styles')) return; const s=document.createElement('style'); s.id='hover-styles'; s.textContent = `
-.no-pop *, .no-pop *:hover { transform:none!important; box-shadow:none!important; transition:none!important; }
-button, li { transition: transform 120ms ease, box-shadow 120ms ease; }
-button:hover:not(.no-pop), li:hover:not(.no-pop) { transform: translateY(-2px) scale(1.01); box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
-nav a:not(.no-pop)(.no-pop), .bg-white ul li:not(.no-pop), table tr:not(.no-pop), .bg-white .flex.items-center:not(.no-pop), .bg-white .p-4 > div:not(.no-pop), .bg-white .p-2 > div:not(.no-pop), .p-2.bg-white.rounded.shadow, .bg-white .rounded.shadow, .flex.items-center > button, .flex.items-center > div { transition: transform 180ms ease, box-shadow 180ms ease; will-change: transform; }
-nav a:hover, .bg-white ul li:hover, table tr:hover, .bg-white .flex.items-center:hover, .bg-white .p-4 > div:hover, .bg-white .p-2 > div:hover, .p-2.bg-white.rounded.shadow:hover, .bg-white .rounded.shadow:hover, .flex.items-center > button:hover, .flex.items-center > div:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 10px 24px rgba(2,6,23,0.08); z-index:10; }
-nav a { display:inline-block; padding:4px 6px; border-radius:6px; }
-nav a:hover { background: rgba(59,130,246,0.06); }
-table tr:hover td { background: rgba(15,23,42,0.02); }
-`; document.head.appendChild(s); }
-function showAnimatedModal(modal){ injectModalStyles(); modal.classList.add('modal-backdrop'); const content = modal.querySelector('div'); if(content) content.classList.add('modal-content'); document.body.appendChild(modal); requestAnimationFrame(()=> modal.classList.add('open')); const originalRemove = modal.remove.bind(modal); modal.remove = ()=>{ modal.classList.remove('open'); setTimeout(()=> originalRemove(), 260); }; }
 
-/* start */
-injectModalStyles();
-injectHoverStyles();
-routeRender();
+function showAnimatedModal(modal){ injectModalStyles(); modal.classList.add('modal-backdrop'); const content = modal.querySelector('div'); if(content) content.classList.add('modal-content'); document.body.appendChild(modal); requestAnimationFrame(()=> modal.classList.add('open')); const originalRemove = modal.remove.bind(modal); modal.remove = ()=>{ modal.classList.remove('open'); setTimeout(()=> originalRemove(), 260); }; }
 </script>
+
 </body>
 </html>
