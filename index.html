@@ -1073,7 +1073,12 @@ function renderQuickForCategory(catName){
   const container = el('div',{});
   let selSub = catName; let selItem = ''; let amt = 1; let note = '';let entryDate = '';
   function getSubcategories(){ const prefix = catName + ' / '; const subs = (state.categories||[]).filter(c=> c === catName || c.startsWith(prefix)); const ordered = [catName, ...subs.filter(s=> s !== catName)]; return Array.from(new Set(ordered)); }
-  function updateItemsForSub(){ const itemSelect = container.querySelector('select.item-select'); if (!itemSelect) return; itemSelect.innerHTML = ''; if (selSub === catName) { itemSelect.appendChild(el('option', { value: '' }, '-- (select subcategory)')); selItem = ''; return; } const list = state.items.filter(i => i.category === selSub); if (list.length === 0) { itemSelect.appendChild(el('option', { value: '' }, '-- no items --')); selItem = ''; return; } list.forEach(i => itemSelect.appendChild(el('option',{ value: i.id }, `${i.name} — ${i.qty} ${i.unit} (${i.location || '-'})`))); selItem = ''; itemSelect.value = ''; }
+  function updateItemsForSub(){ const itemSelect = container.querySelector('select.item-select'); if (!itemSelect) return; itemSelect.innerHTML = ''; if (selSub === catName) { itemSelect.appendChild(el('option', { value: '' }, '-- (select subcategory)')); selItem = ''; return; } const list = state.items
+  .filter(i => i.category === selSub)
+  .slice()
+  .sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+  ); if (list.length === 0) { itemSelect.appendChild(el('option', { value: '' }, '-- no items --')); selItem = ''; return; } list.forEach(i => itemSelect.appendChild(el('option',{ value: i.id }, `${i.name} — ${i.qty} ${i.unit} (${i.location || '-'})`))); selItem = ''; itemSelect.value = ''; }
   function updateSubSelect(){ const subSelect = container.querySelector('select.sub-select'); if(!subSelect) return; subSelect.innerHTML = ''; const subs = getSubcategories(); subs.forEach(s=> subSelect.appendChild(el('option',{value:s}, s === catName ? `${s} (main)` : s.replace(catName + ' / ', '')))); const has = subs.includes(selSub); if(!has) selSub = subs[0] || catName; subSelect.value = selSub; updateItemsForSub(); }
   const form = el('form',{onsubmit:(e)=>{ e.preventDefault(); const it = state.items.find(x=> x.id === selItem); if(!it) return alert('Select item'); const modal = el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'}, el('div',{class:'bg-white p-4 rounded w-96'}, [ el('h3',{class:'font-semibold mb-2'}, 'Confirm consumption'), el('div',{}, `Item: ${it.name}`), el('div',{}, `Amount: ${amt}`), el('div',{}, `Note: ${note||'—'}`), el('div',{class:'flex justify-end gap-2 mt-3'}, [ el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Cancel'), el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded', onclick:()=>{ recordConsumption(it.id, amt, note , entryDate);
 modal.remove();
@@ -1223,7 +1228,12 @@ document.dispatchEvent(new CustomEvent('statechange')); }}, 'Cancel') ])); } }},
 function renderCategory(name){
   clear(app);
   const decoded = name||'';
-  const items = state.items.filter(i=>i.category===decoded);
+  const items = state.items
+  .filter(i => i.category === decoded)
+  .slice() // avoid mutating state
+  .sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+  );
   const cont = el('div',{});
   cont.appendChild(el('div',{class:'flex items-center justify-between'}, [ el('h2',{class:'text-xl font-semibold'}, `Category: ${decoded}`), el('a',{href:'#/categories', class:'text-sky-600'}, 'Back') ]));
   const grid = el('div',{class:'grid md:grid-cols-2 gap-4 mt-4'});
