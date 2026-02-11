@@ -90,7 +90,7 @@
 
 <!-- ================= MAIN APP ================= -->
 <div id="appShell" class="hidden">
-  <div class="max-w-5xl mx-auto p-6">
+  <div class="max-w-screen-2xl mx-auto px-8 py-6">
 
     <header class="flex items-center justify-between mb-6">
       <div>
@@ -104,6 +104,7 @@
           <a href="#/categories">Inventories</a>
           <a href="#/sync">Export Data</a>
           <a href="#/activities">Log History</a>
+		  <a href="#/vehicles">Vehicle Records</a>
         </nav>
 
         <button id="logoutBtn"
@@ -147,8 +148,35 @@ let appReady = false;
 // In-memory state (shared)
 let state = {
   categories: ['A', 'B'],
-  items: []
+  items: [],
+  vehicleRecords: [
+    {
+      id: 'APV-1',
+      name: 'Aerial Platform Vehicle – 1',
+      records: {
+        insurance: { date: '', file: '' },
+        fitness: { date: '', file: '' },
+        puc: { date: '', file: '' },
+        vehicleService: { date: '', file: '' },
+        oemService: { date: '', file: '' },
+        roadTax: { date: '', file: '' }
+      }
+    },
+    {
+      id: 'APV-2',
+      name: 'Aerial Platform Vehicle – 2',
+      records: {
+        insurance: { date: '', file: '' },
+        fitness: { date: '', file: '' },
+        puc: { date: '', file: '' },
+        vehicleService: { date: '', file: '' },
+        oemService: { date: '', file: '' },
+        roadTax: { date: '', file: '' }
+      }
+    }
+  ]
 };
+
 const EXPORT_EXCLUDE_IDS = new Set();
 // 🔑 SAVE FULL STATE TO GOOGLE SHEET (FORM POST – NO CORS)
 async function saveToSheet(data) {
@@ -189,10 +217,62 @@ async function loadFromSheet() {
     }
 
     state = data;
+// ✅ Ensure vehicle info always exists
+if (Array.isArray(state.vehicleRecords)) {
+  state.vehicleRecords = state.vehicleRecords.map((v, idx) => ({
+    ...v,
+    name: 'Aerial Platform Vehicle',
+    info: {
+      regNo: v.info?.regNo || (idx === 0 ? 'UP32 AB 1234' : 'UP32 CD 5678'),
+      makeModel: v.info?.makeModel || (idx === 0 ? 'Genie Z45' : 'JLG 450AJ'),
+      year: v.info?.year || (idx === 0 ? '2021' : '2020')
+    }
+  }));
+}
 
     // Safety
     if (!state.categories.includes('A')) state.categories.push('A');
     if (!state.categories.includes('B')) state.categories.push('B');
+// ✅ Ensure vehicle records always exist
+if (!Array.isArray(state.vehicleRecords)) {
+  state.vehicleRecords = [
+  {
+  id: 'APV-1',
+  name: 'Aerial Platform Vehicle',
+  info: {
+    regNo: 'UP32 AB 1234',
+    makeModel: 'Genie Z45',
+    year: '2021'
+  },
+  records: {
+    insurance: { date: '', file: '' },
+    fitness: { date: '', file: '' },
+    puc: { date: '', file: '' },
+    vehicleService: { date: '', file: '' },
+    oemService: { date: '', file: '' },
+    roadTax: { date: '', file: '' }
+  }
+}
+,
+      {
+  id: 'APV-2',
+  name: 'Aerial Platform Vehicle',
+  info: {
+    regNo: 'UP32 AB 1256',
+    makeModel: 'Genie Z45',
+    year: '2021'
+  },
+  records: {
+    insurance: { date: '', file: '' },
+    fitness: { date: '', file: '' },
+    puc: { date: '', file: '' },
+    vehicleService: { date: '', file: '' },
+    oemService: { date: '', file: '' },
+    roadTax: { date: '', file: '' }
+  }
+}
+  ];
+}
 
 appReady = true;
 
@@ -289,7 +369,11 @@ logoutBtn.onclick = () => {
 
   sheetLoaded = false;
   appReady = false;
-  state = { categories:['A','B'], items:[] };
+state = {
+  categories: ['A','B'],
+  items: [],
+  vehicleRecords: state.vehicleRecords || []
+};
 
   showLogin();
 };
@@ -844,7 +928,8 @@ if(!window.__statechange_attached){
       }
       else if(h.startsWith('/sync')) renderSync();
       else if(h.startsWith('/activities')) renderAllActivities();
-      else renderHome();
+else if(h.startsWith('/vehicles')) renderVehicleRecords();
+else renderHome();
     }catch(e){
        console.warn('Render skipped (functions not ready yet)');
     }
@@ -870,7 +955,9 @@ function routeRender(){
     renderSync();
   } else if (h.startsWith('/activities')) {
     renderAllActivities();
-  } else {
+  } 
+  else if (h.startsWith('/vehicles')) renderVehicleRecords();
+  else {
     renderHome();
   }
 }
@@ -956,10 +1043,38 @@ function renderSync() {
 // Home now uses recentLimit and a Load more / Show less button
 function renderHome(){
   clear(app);
-  const overview = el('section',{class:'bg-white p-4 rounded shadow no-pop'}, [
-    el('h2',{class:'text-lg font-semibold mb-3'}, 'Overview'),
-    el('div',{class:'grid grid-cols-1 md:grid-cols-2 gap-4'}, [ renderCategoryPie() ])
-  ]);
+  const overview = el(
+  'section',
+  { class: 'bg-white p-6 rounded shadow no-pop' },
+  [
+    el(
+      'h2',
+      { class: 'text-lg font-semibold mb-5' },
+      'Overview'
+    ),
+
+    // 🔹 Wider, better-spaced container
+    el(
+      'div',
+      {
+        class:
+          'flex flex-col lg:flex-row items-center justify-between gap-10'
+      },
+      [
+        // Chart area
+        el(
+          'div',
+          {
+            class:
+              'flex-1 flex justify-center'
+          },
+          renderCategoryPie()
+        )
+      ]
+    )
+  ]
+);
+
 
   const itemsSection = currentPieFilter ? el('section',{class:'bg-white p-4 rounded shadow mt-4'}, [ el('h2',{class:'text-lg font-semibold mb-2'}, `Items (qty) — ${currentPieFilter}`), renderItemsBar() ]) : null;
 
@@ -1020,7 +1135,7 @@ function renderCategoryPie(){
   function renderSinglePie(main){
     const entries = buildDataForMain(main);
     const total = entries.reduce((s,e)=> s + e.value, 0) || 1;
-    const size = 200; const cx = size/2, cy = size/2, r = size*0.35;
+    const size = 240; const cx = size/2, cy = size/2, r = size*0.35;
     const svg = el('svg',{width:size,height:size,viewBox:`0 0 ${size} ${size}`});
     let acc = 0; const colors = ['#60a5fa','#34d399','#facc15','#fb7185','#a78bfa','#fb923c'];
     function polar(a){ const rad=(a-90)*Math.PI/180; return {x: cx + r*Math.cos(rad), y: cy + r*Math.sin(rad)} }
@@ -1046,6 +1161,7 @@ function renderCategoryPie(){
     svg.appendChild(el('circle',{cx,cy,r: r*0.5, fill:'#fff'}));
     svg.appendChild(el('text',{x:cx,y:cy-6,'text-anchor':'middle','font-size':'12','font-weight':'600'}, main));
     svg.appendChild(el('text',{x:cx,y:cy+12,'text-anchor':'middle','font-size':'10',fill:'#475569'}, `${entries.reduce((s,e)=>s+e.value,0)} qty`));
+	svg.classList.add('mx-auto');
     const legend = el('div',{class:'flex flex-col gap-1'});
     entries.forEach((en,i)=>{ const label = en.name === main ? main : en.name.replace(main + ' / ', ''); const pct = total ? (en.value/total*100) : 0; const row = el('div',{class:'flex items-center gap-1 whitespace-nowrap'}, [ el('button',{class:'w-3 h-3', style:`background:${colors[i%colors.length]};border-radius:4px`, onclick:()=>{ currentPieFilter = (currentPieFilter === en.name) ? null : en.name; routeRender(); }}, ''), el('div',{class:'text-sm'}, label), el('div',{class:'text-xs text-slate-500 ml-2'}, `${en.value}`) ]); legend.appendChild(row); });
     const box = el('div',{class:'flex items-start gap-0'}, [ el('div',{class:'p-0 bg-white rounded shadow'}, svg), legend ]);
@@ -1054,9 +1170,18 @@ function renderCategoryPie(){
 
 const piesContainer = el(
   'div',
-  { class: 'flex flex-col md:flex-row items-start gap-7' },
-  [ renderSinglePie('A'), renderSinglePie('B') ]
+  {
+    class:
+      'grid grid-cols-1 xl:grid-cols-2 gap-10 w-full'
+  },
+  [
+    el('div', { class: 'flex justify-start pl-6' }, renderSinglePie('A')),
+    el('div', { class: 'flex justify-start pl-6' }, renderSinglePie('B'))
+  ]
 );
+
+
+
 
   const clearBtn = currentPieFilter ? el('div',{class:'flex items-start md:items-center'}, el('button',{class:'px-3 py-1 text-sm border rounded', onclick:()=>{ currentPieFilter = null; routeRender(); }}, 'Clear filter')) : null;
   const wrapper = el('div',{class:'flex flex-col md:flex-row md:items-start md:justify-between gap-4'}, [ piesContainer, clearBtn ]);
@@ -1462,6 +1587,170 @@ function renderCategories(){
   function showRename(c){ const modal = el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'}, el('div',{class:'bg-white p-4 rounded w-96'}, [ el('h3',{class:'font-semibold mb-2'}, 'Rename category'), el('div',{}, `Renaming: ${c}`), el('input',{class:'w-full p-2 border rounded my-2', value:c, id:'rn'}), el('div',{class:'flex justify-end gap-2'}, [ el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Cancel'), el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded', onclick:()=>{ const v = modal.querySelector('#rn').value.trim(); if(v) { editCategory(c,v); modal.remove(); document.dispatchEvent(new CustomEvent('statechange')); } }}, 'Save') ]) ])); showAnimatedModal(modal); }
 
 }
+function renderVehicleRecords() {
+  clear(app);
+
+  app.appendChild(
+    el(
+      'h2',
+      { class: 'text-2xl font-semibold mb-6' },
+      'Aerial Platform Vehicle Records'
+    )
+  );
+
+  // 🔹 GRID CONTAINER (2 columns on desktop)
+  const grid = el('div', {
+    class: 'grid grid-cols-1 lg:grid-cols-2 gap-6'
+  });
+
+  state.vehicleRecords.forEach(vehicle => {
+   const card = el('div', {
+  class: 'bg-white p-4 rounded shadow'
+}, [
+  el('div', { class: 'mb-4' }, [
+    el('h3', { class: 'text-lg font-semibold' }, vehicle.name),
+
+    el('div', { class: 'text-sm text-slate-600 mt-1 space-y-1' }, [
+      el('div', {}, `Reg No: ${vehicle.info?.regNo || '—'}`),
+      el('div', {}, `Make / Model: ${vehicle.info?.makeModel || '—'}`),
+      el('div', {}, `Year: ${vehicle.info?.year || '—'}`)
+    ])
+  ]),
+
+  buildVehicleTable(vehicle)
+]);
+
+
+    grid.appendChild(card);
+  });
+
+  app.appendChild(grid);
+}
+
+function buildVehicleTable(vehicle) {
+  const rows = [
+    ['Insurance', 'insurance'],
+    ['Fitness Certificate', 'fitness'],
+    ['PUC', 'puc'],
+    ['Last Vehicle Servicing', 'vehicleService'],
+    ['Last OEM Servicing', 'oemService'],
+    ['Road Tax', 'roadTax']
+  ];
+
+  const table = el('table', { class: 'w-full text-sm border' });
+  const tbody = el('tbody', {});
+
+  table.appendChild(
+    el('thead', {}, el('tr', {}, [
+      el('th', { class: 'p-2 border text-left' }, 'Record'),
+      el('th', { class: 'p-2 border text-center' }, 'Valid upto'),
+      el('th', { class: 'p-2 border text-center' }, 'Document'),
+      el('th', { class: 'p-2 border text-center' }, 'Action')
+    ]))
+  );
+
+  rows.forEach(([label, key]) => {
+    const rec = vehicle.records[key];
+
+    tbody.appendChild(
+      el('tr', {}, [
+        el('td', { class: 'p-2 border font-medium' }, label),
+        el('td', { class: 'p-2 border text-center' }, rec.date || '—'),
+        el(
+          'td',
+          { class: 'p-2 border text-center' },
+          rec.file
+            ? el(
+                'a',
+                {
+                  href: rec.file,
+                  target: '_blank',
+                  class: 'text-sky-600 underline'
+                },
+                'View'
+              )
+            : '—'
+        ),
+        el(
+          'td',
+          { class: 'p-2 border text-center' },
+          el(
+            'button',
+            {
+              class:
+                'px-2 py-1 bg-sky-600 text-white rounded text-xs',
+              onclick: () =>
+                openVehicleEditModal(vehicle.id, key)
+            },
+            'Update'
+          )
+        )
+      ])
+    );
+  });
+
+  table.appendChild(tbody);
+  return table;
+}
+function openVehicleEditModal(vehicleId, recordKey) {
+  const vehicle = state.vehicleRecords.find(v => v.id === vehicleId);
+  const rec = vehicle.records[recordKey];
+
+  const modal = el(
+    'div',
+    { class: 'fixed inset-0 bg-black/40 flex items-center justify-center' },
+    el('div', { class: 'bg-white p-4 rounded w-96' }, [
+      el('h3', { class: 'font-semibold mb-3' }, 'Update Record'),
+
+      el('input', {
+        type: 'date',
+        class: 'w-full p-2 border rounded mb-2',
+        value: rec.date,
+        onchange: e => (rec.date = e.target.value)
+      }),
+
+      el('input', {
+        type: 'file',
+        class: 'w-full p-2 border rounded mb-3',
+        onchange: e => {
+          const file = e.target.files[0];
+          if (file) {
+            rec.file = URL.createObjectURL(file);
+          }
+        }
+      }),
+
+      el('div', { class: 'flex justify-end gap-2' }, [
+        el(
+          'button',
+          {
+            class: 'px-3 py-1 border rounded',
+            onclick: () => modal.remove()
+          },
+          'Cancel'
+        ),
+        el(
+          'button',
+          {
+            class:
+              'px-3 py-1 bg-green-600 text-white rounded',
+            onclick: () => {
+              saveToSheet(state);
+              document.dispatchEvent(
+                new CustomEvent('statechange')
+              );
+              modal.remove();
+            }
+          },
+          'Save'
+        )
+      ])
+    ])
+  );
+
+  showAnimatedModal(modal);
+}
+
 
 /* small UI helpers & modal styles */
 function injectModalStyles(){ if(document.getElementById('modal-styles')) return; const s=document.createElement('style'); s.id='modal-styles'; s.textContent = `
