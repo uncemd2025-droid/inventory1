@@ -149,32 +149,43 @@ let appReady = false;
 let state = {
   categories: ['A', 'B'],
   items: [],
-  vehicleRecords: [
-    {
-      id: 'APV-1',
-      name: 'Aerial Platform Vehicle – 1',
-      records: {
-        insurance: { date: '', file: '' },
-        fitness: { date: '', file: '' },
-        puc: { date: '', file: '' },
-        vehicleService: { date: '', file: '' },
-        oemService: { date: '', file: '' },
-        roadTax: { date: '', file: '' }
-      }
+vehicleRecords: [
+  {
+    id: 'APV-1',
+    name: 'Aerial Platform Vehicle – 1',
+    info: {
+      regNo: 'UP32 ABCDFGHIJ 1234',
+      makeModel: 'Genie Z45',
+      year: '2021'
     },
-    {
-      id: 'APV-2',
-      name: 'Aerial Platform Vehicle – 2',
-      records: {
-        insurance: { date: '', file: '' },
-        fitness: { date: '', file: '' },
-        puc: { date: '', file: '' },
-        vehicleService: { date: '', file: '' },
-        oemService: { date: '', file: '' },
-        roadTax: { date: '', file: '' }
-      }
+    records: {
+      insurance: { date: '', file: '' },
+      fitness: { date: '', file: '' },
+      puc: { date: '', file: '' },
+      vehicleService: { date: '', file: '' },
+      oemService: { date: '', file: '' },
+      roadTax: { date: '', file: '' }
     }
-  ]
+  },
+  {
+    id: 'APV-2',
+    name: 'Aerial Platform Vehicle – 2',
+    info: {
+      regNo: 'UP32 CD 5678',
+      makeModel: 'JLG 450AJ',
+      year: '2021'
+    },
+    records: {
+      insurance: { date: '', file: '' },
+      fitness: { date: '', file: '' },
+      puc: { date: '', file: '' },
+      vehicleService: { date: '', file: '' },
+      oemService: { date: '', file: '' },
+      roadTax: { date: '', file: '' }
+    }
+  }
+]
+
 };
 
 const EXPORT_EXCLUDE_IDS = new Set();
@@ -217,62 +228,61 @@ async function loadFromSheet() {
     }
 
     state = data;
-// ✅ Ensure vehicle info always exists
-if (Array.isArray(state.vehicleRecords)) {
-  state.vehicleRecords = state.vehicleRecords.map((v, idx) => ({
-    ...v,
-    name: 'Aerial Platform Vehicle',
+// ✅ Ensure vehicle records ALWAYS exist with full structure
+const defaultVehicles = [
+  {
+    id: 'APV-1',
+    name: 'Aerial Platform Vehicle – 1',
     info: {
-      regNo: v.info?.regNo || (idx === 0 ? 'UP32 AB 1234' : 'UP32 CD 5678'),
-      makeModel: v.info?.makeModel || (idx === 0 ? 'Genie Z45' : 'JLG 450AJ'),
-      year: v.info?.year || (idx === 0 ? '2021' : '2020')
+      regNo: 'UP32 ABCDFGHIJ 1234',
+      makeModel: 'Genie Z45',
+      year: '2021'
     }
-  }));
+  },
+  {
+    id: 'APV-2',
+    name: 'Aerial Platform Vehicle – 2',
+    info: {
+      regNo: 'UP32 CD 5678',
+      makeModel: 'JLG 450AJ',
+      year: '2021'
+    }
+  }
+];
+
+if (!Array.isArray(state.vehicleRecords)) {
+  state.vehicleRecords = [];
 }
+
+state.vehicleRecords = defaultVehicles.map(def => {
+  const existing = state.vehicleRecords.find(v => v.id === def.id) || {};
+
+  return {
+    id: def.id,
+    name: def.name,
+    info: {
+      regNo: existing.info?.regNo || def.info.regNo,
+      makeModel: existing.info?.makeModel || def.info.makeModel,
+      year: existing.info?.year || def.info.year
+    },
+records: {
+  insurance: existing.records?.insurance || { date: '', file: '' },
+  fitness: existing.records?.fitness || { date: '', file: '' },
+  puc: existing.records?.puc || { date: '', file: '' },
+  vehicleService: existing.records?.vehicleService || { date: '', file: '' },
+  oemService: existing.records?.oemService || { date: '', file: '' },
+  roadTax: existing.records?.roadTax || { date: '', file: '' }
+}
+
+  };
+});
+
+
 
     // Safety
     if (!state.categories.includes('A')) state.categories.push('A');
     if (!state.categories.includes('B')) state.categories.push('B');
-// ✅ Ensure vehicle records always exist
-if (!Array.isArray(state.vehicleRecords)) {
-  state.vehicleRecords = [
-  {
-  id: 'APV-1',
-  name: 'Aerial Platform Vehicle',
-  info: {
-    regNo: 'UP32 AB 1234',
-    makeModel: 'Genie Z45',
-    year: '2021'
-  },
-  records: {
-    insurance: { date: '', file: '' },
-    fitness: { date: '', file: '' },
-    puc: { date: '', file: '' },
-    vehicleService: { date: '', file: '' },
-    oemService: { date: '', file: '' },
-    roadTax: { date: '', file: '' }
-  }
-}
-,
-      {
-  id: 'APV-2',
-  name: 'Aerial Platform Vehicle',
-  info: {
-    regNo: 'UP32 AB 1256',
-    makeModel: 'Genie Z45',
-    year: '2021'
-  },
-  records: {
-    insurance: { date: '', file: '' },
-    fitness: { date: '', file: '' },
-    puc: { date: '', file: '' },
-    vehicleService: { date: '', file: '' },
-    oemService: { date: '', file: '' },
-    roadTax: { date: '', file: '' }
-  }
-}
-  ];
-}
+
 
 appReady = true;
 
@@ -369,14 +379,52 @@ logoutBtn.onclick = () => {
 
   sheetLoaded = false;
   appReady = false;
-state = {
-  categories: ['A','B'],
-  items: [],
-  vehicleRecords: state.vehicleRecords || []
-};
+
+  // Reset clean default state
+  state = {
+    categories: ['A','B'],
+    items: [],
+    vehicleRecords: [
+      {
+        id: 'APV-1',
+        name: 'Aerial Platform Vehicle – 1',
+        info: {
+          regNo: 'UP32 ABCDFGHIJ 1234',
+          makeModel: 'Genie Z45',
+          year: '2021'
+        },
+        records: {
+          insurance: { date: '', file: '' },
+          fitness: { date: '', file: '' },
+          puc: { date: '', file: '' },
+          vehicleService: { date: '', file: '' },
+          oemService: { date: '', file: '' },
+          roadTax: { date: '', file: '' }
+        }
+      },
+      {
+        id: 'APV-2',
+        name: 'Aerial Platform Vehicle – 2',
+        info: {
+          regNo: 'UP32 CD 5678',
+          makeModel: 'JLG 450AJ',
+          year: '2021'
+        },
+        records: {
+          insurance: { date: '', file: '' },
+          fitness: { date: '', file: '' },
+          puc: { date: '', file: '' },
+          vehicleService: { date: '', file: '' },
+          oemService: { date: '', file: '' },
+          roadTax: { date: '', file: '' }
+        }
+      }
+    ]
+  };
 
   showLogin();
 };
+
 
 
 // INITIAL LOAD (PAGE REFRESH SAFE)
@@ -1610,11 +1658,21 @@ function renderVehicleRecords() {
   el('div', { class: 'mb-4' }, [
     el('h3', { class: 'text-lg font-semibold' }, vehicle.name),
 
-    el('div', { class: 'text-sm text-slate-600 mt-1 space-y-1' }, [
-      el('div', {}, `Reg No: ${vehicle.info?.regNo || '—'}`),
-      el('div', {}, `Make / Model: ${vehicle.info?.makeModel || '—'}`),
-      el('div', {}, `Year: ${vehicle.info?.year || '—'}`)
-    ])
+el('div', { class: 'text-sm text-slate-600 mt-1 space-y-1' }, [
+  el('div', {}, `Reg No: ${vehicle.info.regNo}`),
+  el('div', {}, `Make / Model: ${vehicle.info.makeModel}`),
+  el('div', {}, `Year: ${vehicle.info.year}`),
+
+  el(
+    'button',
+    {
+      class: 'mt-2 px-2 py-1 bg-sky-600 text-white rounded text-xs',
+      onclick: () => openVehicleInfoEditModal(vehicle.id)
+    },
+    'Edit Vehicle Info'
+  )
+])
+
   ]),
 
   buildVehicleTable(vehicle)
@@ -1625,6 +1683,42 @@ function renderVehicleRecords() {
   });
 
   app.appendChild(grid);
+}
+function getExpiryStatus(dateStr) {
+  if (!dateStr) return { color: '', label: '—' };
+
+  const today = new Date();
+  const expiry = new Date(dateStr + 'T00:00:00');
+
+  const diffDays = Math.ceil(
+    (expiry - today) / (1000 * 60 * 60 * 24)
+  );
+
+  if (diffDays < 0) {
+    return {
+      color: 'bg-red-100 text-red-700',
+      label: `Expired ${Math.abs(diffDays)} days ago`
+    };
+  }
+
+  if (diffDays <= 30) {
+    return {
+      color: 'bg-orange-100 text-orange-700',
+      label: `${diffDays} days left`
+    };
+  }
+
+  if (diffDays <= 60) {
+    return {
+      color: 'bg-yellow-100 text-yellow-700',
+      label: `${diffDays} days left`
+    };
+  }
+
+  return {
+    color: 'bg-green-100 text-green-700',
+    label: `${diffDays} days left`
+  };
 }
 
 function buildVehicleTable(vehicle) {
@@ -1655,7 +1749,18 @@ function buildVehicleTable(vehicle) {
     tbody.appendChild(
       el('tr', {}, [
         el('td', { class: 'p-2 border font-medium' }, label),
-        el('td', { class: 'p-2 border text-center' }, rec.date || '—'),
+        (function() {
+  const status = getExpiryStatus(rec.date);
+
+  return el(
+    'td',
+    { class: `p-2 border text-center ${status.color} rounded` },
+    rec.date
+      ? `${rec.date} (${status.label})`
+      : '—'
+  );
+})(),
+
         el(
           'td',
           { class: 'p-2 border text-center' },
@@ -1739,6 +1844,79 @@ function openVehicleEditModal(vehicleId, recordKey) {
               document.dispatchEvent(
                 new CustomEvent('statechange')
               );
+              modal.remove();
+            }
+          },
+          'Save'
+        )
+      ])
+    ])
+  );
+
+  showAnimatedModal(modal);
+}
+function openVehicleInfoEditModal(vehicleId) {
+  const vehicle = state.vehicleRecords.find(v => v.id === vehicleId);
+  if (!vehicle) return;
+
+  const modal = el(
+    'div',
+    { class: 'fixed inset-0 bg-black/40 flex items-center justify-center' },
+    el('div', { class: 'bg-white p-5 rounded w-96 space-y-3' }, [
+
+      el('h3', { class: 'font-semibold text-lg' }, 'Edit Vehicle Info'),
+
+      el('div', {}, [
+        el('label', { class: 'text-sm block mb-1' }, 'Registration Number'),
+        el('input', {
+          class: 'w-full p-2 border rounded',
+          value: vehicle.info.regNo,
+          id: 'edit-regno'
+        })
+      ]),
+
+      el('div', {}, [
+        el('label', { class: 'text-sm block mb-1' }, 'Make / Model'),
+        el('input', {
+          class: 'w-full p-2 border rounded',
+          value: vehicle.info.makeModel,
+          id: 'edit-make'
+        })
+      ]),
+
+      el('div', {}, [
+        el('label', { class: 'text-sm block mb-1' }, 'Year'),
+        el('input', {
+          class: 'w-full p-2 border rounded',
+          value: vehicle.info.year,
+          id: 'edit-year'
+        })
+      ]),
+
+      el('div', { class: 'flex justify-end gap-2 pt-3' }, [
+        el(
+          'button',
+          {
+            class: 'px-3 py-1 border rounded',
+            onclick: () => modal.remove()
+          },
+          'Cancel'
+        ),
+        el(
+          'button',
+          {
+            class: 'px-3 py-1 bg-green-600 text-white rounded',
+            onclick: () => {
+              vehicle.info.regNo =
+                modal.querySelector('#edit-regno').value.trim();
+              vehicle.info.makeModel =
+                modal.querySelector('#edit-make').value.trim();
+              vehicle.info.year =
+                modal.querySelector('#edit-year').value.trim();
+
+              saveToSheet(state);
+              document.dispatchEvent(new CustomEvent('statechange'));
+
               modal.remove();
             }
           },
