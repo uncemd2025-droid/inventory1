@@ -8,16 +8,316 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+/* ============================================================
+   ANIMATION & VISUAL ENHANCEMENT LAYER
+   ============================================================ */
+
+/* --- Keyframes --- */
+@keyframes fadeSlideIn {
+  from { opacity:0; transform:translateY(14px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes cardEntrance {
+  from { opacity:0; transform:translateY(18px) scale(0.97); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes countUp {
+  from { opacity:0; transform:translateY(6px) scale(0.92); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes barGrow {
+  from { width:0 !important; }
+}
+@keyframes rowIn {
+  from { opacity:0; transform:translateX(-10px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+@keyframes toastIn {
+  from { opacity:0; transform:translateY(16px) translateX(-50%) scale(0.95); }
+  to   { opacity:1; transform:translateY(0)    translateX(-50%) scale(1); }
+}
+@keyframes toastOut {
+  from { opacity:1; transform:translateY(0)   translateX(-50%) scale(1); }
+  to   { opacity:0; transform:translateY(8px) translateX(-50%) scale(0.95); }
+}
+@keyframes pieSlicePop {
+  from { transform: scale(0.05); opacity:0; }
+  to   { transform: scale(1);    opacity:1; }
+}
+@keyframes pulseRing {
+  0%   { box-shadow:0 0 0 0   rgba(59,130,246,.35); }
+  60%  { box-shadow:0 0 0 7px rgba(59,130,246,0); }
+  100% { box-shadow:0 0 0 0   rgba(59,130,246,0); }
+}
+@keyframes shimmer {
+  0%,100% { opacity:.5; }
+  50%     { opacity:1; }
+}
+@keyframes spinOnce {
+  from { transform:rotate(0deg); }
+  to   { transform:rotate(360deg); }
+}
+
+/* --- Global page load --- */
+body.app-ready #appShell {
+  animation: fadeSlideIn .45s ease both;
+}
+
+/* --- Header --- */
+#appShell header {
+  animation: fadeSlideIn .4s ease both;
+}
+
+/* --- Nav links --- */
+nav a {
+  display:inline-block;
+  padding:5px 12px;
+  border-radius:8px;
+  font-size:13.5px;
+  font-weight:500;
+  transition: background .15s, color .15s, transform .12s;
+  text-decoration:none;
+  color:#0ea5e9;
+}
+nav a:hover {
+  background:rgba(14,165,233,.1);
+  transform:translateY(-1px);
+  text-decoration:none;
+}
+nav a.nav-active {
+  background:rgba(14,165,233,.13);
+}
+
+/* --- Logout button --- */
+#logoutBtn {
+  transition: background .15s, transform .12s, box-shadow .15s !important;
+}
+#logoutBtn:hover {
+  transform:translateY(-1px) !important;
+  box-shadow:0 3px 10px rgba(220,38,38,.25) !important;
+}
+
+/* --- Metric summary cards (Home page) --- */
+.metric-card {
+  background:#fff;
+  border-radius:14px;
+  border:1px solid rgba(0,0,0,.07);
+  padding:18px 20px;
+  animation: cardEntrance .45s ease both;
+}
+.metric-card:nth-child(1){animation-delay:.05s}
+.metric-card:nth-child(2){animation-delay:.10s}
+.metric-card:nth-child(3){animation-delay:.15s}
+.metric-card:nth-child(4){animation-delay:.20s}
+.metric-label {
+  font-size:11px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.7px;
+  color:#94a3b8;
+  margin-bottom:6px;
+}
+.metric-value {
+  font-size:28px;
+  font-weight:700;
+  letter-spacing:-1px;
+  animation: countUp .5s .3s ease both;
+}
+.metric-sub {
+  font-size:11px;
+  color:#94a3b8;
+  margin-top:3px;
+}
+
+/* --- Section cards entrance --- */
+section.bg-white {
+  animation: cardEntrance .45s ease both;
+  border-radius:14px !important;
+}
+
+/* --- Pie slice animation (applied via JS) --- */
+.pie-animated {
+  transform-origin: var(--cx, 120px) var(--cy, 120px);
+  animation: pieSlicePop .5s cubic-bezier(.2,.8,.2,1) both;
+}
+.pie-animated:nth-child(1){animation-delay:.06s}
+.pie-animated:nth-child(2){animation-delay:.14s}
+.pie-animated:nth-child(3){animation-delay:.22s}
+.pie-animated:nth-child(4){animation-delay:.30s}
+.pie-animated:nth-child(5){animation-delay:.38s}
+.pie-animated:nth-child(6){animation-delay:.46s}
+
+/* --- Bar rows in activity/history --- */
+.anim-row-in {
+  animation: rowIn .3s ease both;
+}
+.anim-row-in:nth-child(1){animation-delay:.04s}
+.anim-row-in:nth-child(2){animation-delay:.08s}
+.anim-row-in:nth-child(3){animation-delay:.12s}
+.anim-row-in:nth-child(4){animation-delay:.16s}
+.anim-row-in:nth-child(5){animation-delay:.20s}
+.anim-row-in:nth-child(6){animation-delay:.24s}
+.anim-row-in:nth-child(7){animation-delay:.28s}
+.anim-row-in:nth-child(8){animation-delay:.32s}
+.anim-row-in:nth-child(9){animation-delay:.36s}
+.anim-row-in:nth-child(10){animation-delay:.40s}
+
+/* --- Animated bars --- */
+.qty-bar {
+  height:8px;
+  border-radius:4px;
+  animation: barGrow .7s cubic-bezier(.2,.8,.2,1) both;
+}
+.qty-bar:nth-child(1){animation-delay:.1s}
+
+/* --- Buttons --- */
+button, .btn {
+  transition: background .15s, transform .12s, box-shadow .15s, opacity .15s !important;
+}
+button:hover:not(.no-pop):not([disabled]) {
+  transform: translateY(-2px) scale(1.015) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,.10) !important;
+}
+button:active:not(.no-pop):not([disabled]) {
+  transform: scale(.97) translateY(0) !important;
+}
+.btn-record:hover {
+  animation: pulseRing 1.4s ease;
+}
+
+/* --- Form inputs focus ring --- */
+input[type="text"], input[type="number"], input[type="date"],
+input[type="password"], select, textarea {
+  transition: border-color .15s, box-shadow .15s !important;
+  outline:none !important;
+}
+input[type="text"]:focus, input[type="number"]:focus,
+input[type="date"]:focus, input[type="password"]:focus,
+select:focus, textarea:focus {
+  border-color:#3b82f6 !important;
+  box-shadow:0 0 0 3px rgba(59,130,246,.15) !important;
+}
+
+/* --- Login page card entrance --- */
+#loginPage > div {
+  animation: cardEntrance .5s .1s ease both;
+}
+
+/* --- Login button spinner --- */
+#loginSpinner {
+  animation: spinOnce 1s linear infinite;
+}
+
+/* --- Toast / Undo snackbar (upgraded) --- */
+#undo-snack {
+  animation: toastIn .3s ease both !important;
+  border-radius:12px !important;
+  border:.5px solid rgba(255,255,255,.15) !important;
+  box-shadow:0 8px 28px rgba(0,0,0,.25) !important;
+  font-size:13px !important;
+}
+#undo-snack button {
+  border-radius:7px !important;
+  font-size:12px !important;
+  font-weight:600 !important;
+  transition: opacity .12s !important;
+}
+#undo-snack button:hover {
+  opacity:.8 !important;
+  transform:none !important;
+  box-shadow:none !important;
+}
+
+/* --- Modal backdrop & content --- */
+.modal-backdrop {
+  opacity:0;
+  transition: opacity .22s ease;
+}
+.modal-backdrop.open {
+  opacity:1;
+}
+.modal-content {
+  transform: scale(0.93) translateY(10px);
+  opacity:0;
+  transition: transform .26s cubic-bezier(.2,.8,.2,1), opacity .22s ease;
+  border-radius:14px !important;
+  box-shadow:0 20px 60px rgba(0,0,0,.2) !important;
+}
+.modal-backdrop.open .modal-content {
+  transform: scale(1) translateY(0);
+  opacity:1;
+}
+
+/* --- Status pills for vehicle records --- */
+.status-pill {
+  display:inline-block;
+  font-size:11px;
+  font-weight:600;
+  padding:3px 9px;
+  border-radius:20px;
+  letter-spacing:.2px;
+}
+.status-ok      { background:rgba(34,197,94,.12);  color:#15803d; }
+.status-warn-60 { background:rgba(234,179,8,.15);  color:#a16207; }
+.status-warn-30 { background:rgba(249,115,22,.15); color:#c2410c; }
+.status-danger  { background:rgba(239,68,68,.12);  color:#dc2626; }
+.status-none    { background:rgba(148,163,184,.1); color:#94a3b8; }
+
+/* --- Table rows hover --- */
+tbody tr:hover {
+  background:rgba(14,165,233,.04);
+  transition: background .12s;
+}
+
+/* --- Export button glow --- */
+.btn-export:hover {
+  box-shadow:0 4px 14px rgba(5,150,105,.35) !important;
+}
+
+/* --- Section headings --- */
+section h2.text-lg {
+  letter-spacing:-.2px;
+}
+
+/* --- Category boxes --- */
+.category-box {
+  transition: box-shadow .18s, transform .15s;
+}
+.category-box:hover {
+  box-shadow:0 6px 20px rgba(0,0,0,.07);
+  transform:translateY(-2px);
+}
+
+/* --- Activity entry color indicators --- */
+.activity-added   { border-left:3px solid #22c55e !important; }
+.activity-consumed{ border-left:3px solid #ef4444 !important; }
+
+/* --- Vehicle card entrance stagger --- */
+#app .grid > div:nth-child(1) { animation: cardEntrance .4s .08s ease both; }
+#app .grid > div:nth-child(2) { animation: cardEntrance .4s .16s ease both; }
+
+/* --- Suppress hover on no-pop --- */
+.no-pop *, .no-pop *:hover {
+  transform:none !important;
+  box-shadow:none !important;
+}
+.no-pop button:hover {
+  transform:none !important;
+  box-shadow:none !important;
+}
+</style>
 </head>
 
 <body class="min-h-screen bg-slate-50 text-slate-900">
+
 <!-- ================= LOGIN PAGE ================= -->
 <div
   id="loginPage"
   class="min-h-screen flex items-center justify-center bg-slate-100 px-6"
 >
-  <!-- Container -->
- <div class="flex flex-col md:flex-row items-center gap-14 bg-white rounded-xl shadow-xl p-12 max-w-6xl w-full">
+  <div class="flex flex-col md:flex-row items-center gap-14 bg-white rounded-xl shadow-xl p-12 max-w-6xl w-full">
 
     <!-- LEFT: Illustration -->
     <div class="md:w-1/2 flex justify-center">
@@ -47,39 +347,18 @@
       />
 
       <button
-  id="loginSubmit"
-  class="w-full py-2 bg-slate-800 text-white rounded flex items-center justify-center gap-2"
->
-  <span id="loginBtnText">Login</span>
-
-  <svg
-    id="loginSpinner"
-    class="hidden w-5 h-5 animate-spin text-white"
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-  >
-    <circle
-      class="opacity-25"
-      cx="12"
-      cy="12"
-      r="10"
-      stroke="currentColor"
-      stroke-width="4"
-    ></circle>
-    <path
-      class="opacity-75"
-      fill="currentColor"
-      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-    ></path>
-  </svg>
-</button>
-
-
-      <p
-        id="loginError"
-        class="text-red-600 text-sm mt-3 hidden text-center"
+        id="loginSubmit"
+        class="w-full py-2 bg-slate-800 text-white rounded flex items-center justify-center gap-2"
       >
+        <span id="loginBtnText">Login</span>
+        <svg id="loginSpinner" class="hidden w-5 h-5 text-white"
+          xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+      </button>
+
+      <p id="loginError" class="text-red-600 text-sm mt-3 hidden text-center">
         Wrong password
       </p>
     </div>
@@ -99,12 +378,12 @@
       </div>
 
       <div class="flex items-center gap-4">
-        <nav class="flex items-center gap-3 text-sky-600">
+        <nav class="flex items-center gap-1 text-sky-600">
           <a href="#/">Home</a>
           <a href="#/categories">Inventories</a>
           <a href="#/sync">Export Data</a>
           <a href="#/activities">Log History</a>
-		  <a href="#/vehicles">Vehicle Records</a>
+          <a href="#/vehicles">Vehicle Records</a>
         </nav>
 
         <button id="logoutBtn"
@@ -121,176 +400,181 @@
     </footer>
   </div>
 </div>
+
 <script>
-/* ===== UI STYLE HELPERS (MUST BE BEFORE LOGIN SCRIPT) ===== */
+/* ===== UI STYLE HELPERS ===== */
 function injectHoverStyles(){
   if(document.getElementById('hover-styles')) return;
   const s=document.createElement('style');
   s.id='hover-styles';
   s.textContent = `
     .no-pop *, .no-pop *:hover { transform:none!important; box-shadow:none!important; transition:none!important; }
-    button, li { transition: transform 120ms ease, box-shadow 120ms ease; }
-    button:hover:not(.no-pop), li:hover:not(.no-pop) {
-      transform: translateY(-2px) scale(1.01);
-      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
-    }
   `;
   document.head.appendChild(s);
 }
+
+/* ===== METRIC CARDS — rendered at top of Home page ===== */
+function renderMetricCards() {
+  const totalItems = state.items.length;
+  const aItems = state.items.filter(i => i.category === 'A' || i.category.startsWith('A /')).length;
+  const bItems = state.items.filter(i => i.category === 'B' || i.category.startsWith('B /')).length;
+  const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate()-7);
+  const recentCount = state.items.flatMap(i=>(i.history||[])).filter(h=>{
+    try { return new Date(h.date) >= sevenDaysAgo; } catch{ return false; }
+  }).length;
+
+  const cards = [
+    { label:'Total Items',   value: totalItems,   color:'#3b82f6', sub:'across all categories' },
+    { label:'Lighting (A)',  value: aItems,        color:'#22c55e', sub:'Category A items' },
+    { label:'Cabling (B)',   value: bItems,        color:'#3b82f6', sub:'Category B items' },
+    { label:'Activity (7d)', value: recentCount,   color:'#f59e0b', sub:'entries this week' },
+  ];
+
+  const grid = el('div', { class:'grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 no-pop' });
+  cards.forEach((c, i) => {
+    const card = el('div', { class:'metric-card bg-white rounded-xl p-5 shadow-sm' }, [
+      el('div', { class:'metric-label' }, c.label),
+      el('div', { class:'metric-value', style:`color:${c.color}`, 'data-target': c.value }, '0'),
+      el('div', { class:'metric-sub' }, c.sub),
+    ]);
+    grid.appendChild(card);
+  });
+
+  // Animate count-up after DOM insert
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      grid.querySelectorAll('.metric-value').forEach(el => {
+        const target = parseInt(el.getAttribute('data-target') || '0');
+        animateCount(el, target, 700);
+      });
+    }, 100);
+  });
+
+  return grid;
+}
+
+function animateCount(el, target, duration) {
+  let start = 0;
+  const step = target / (duration / 16);
+  const tick = () => {
+    start = Math.min(start + step, target);
+    el.textContent = Math.round(start);
+    if (start < target) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+/* ===== HIGHLIGHT NAV LINK ===== */
+function updateNavActive() {
+  const h = location.hash || '#/';
+  document.querySelectorAll('nav a').forEach(a => {
+    const href = a.getAttribute('href');
+    const active = h === href || (href !== '#/' && h.startsWith(href));
+    a.classList.toggle('nav-active', active);
+  });
+}
+window.addEventListener('hashchange', updateNavActive);
 </script>
+
 <script>
 /* ================= GOOGLE SHEET SYNC ================= */
-const API_URL = 'https://script.google.com/macros/s/AKfycbyAaHK0qLfJnq7cWF2jV4E4zaFK465uD4SWSicPLXN3j7DbAJXjExqZ_BRU1etPEqCa/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbww_COPZKXSkU0UczZeyQxj3zRE2z4WiWFNSkME2WNKr8K-kykM6wxeVsgaziSRnuvA/exec';
 
 let sheetLoaded = false;
 let appReady = false;
 
-// In-memory state (shared)
 let state = {
   categories: ['A', 'B'],
   items: [],
-vehicleRecords: [
-  {
-    id: 'APV-1',
-    name: 'Aerial Platform Vehicle – 1',
-    info: {
-      regNo: 'UP32 ABCDFGHIJ 1234',
-      makeModel: 'Genie Z45',
-      year: '2021'
+  vehicleRecords: [
+    {
+      id: 'APV-1',
+      name: 'Aerial Platform Vehicle – 1',
+      info: { regNo: 'UP32 ABCDFGHIJ 1234', makeModel: 'Genie Z45', year: '2021' },
+      records: {
+        insurance: { date: '', file: '' }, fitness: { date: '', file: '' },
+        puc: { date: '', file: '' }, vehicleService: { date: '', file: '' },
+        oemService: { date: '', file: '' }, roadTax: { date: '', file: '' }
+      }
     },
-    records: {
-      insurance: { date: '', file: '' },
-      fitness: { date: '', file: '' },
-      puc: { date: '', file: '' },
-      vehicleService: { date: '', file: '' },
-      oemService: { date: '', file: '' },
-      roadTax: { date: '', file: '' }
+    {
+      id: 'APV-2',
+      name: 'Aerial Platform Vehicle – 2',
+      info: { regNo: 'UP32 CD 5678', makeModel: 'JLG 450AJ', year: '2021' },
+      records: {
+        insurance: { date: '', file: '' }, fitness: { date: '', file: '' },
+        puc: { date: '', file: '' }, vehicleService: { date: '', file: '' },
+        oemService: { date: '', file: '' }, roadTax: { date: '', file: '' }
+      }
     }
-  },
-  {
-    id: 'APV-2',
-    name: 'Aerial Platform Vehicle – 2',
-    info: {
-      regNo: 'UP32 CD 5678',
-      makeModel: 'JLG 450AJ',
-      year: '2021'
-    },
-    records: {
-      insurance: { date: '', file: '' },
-      fitness: { date: '', file: '' },
-      puc: { date: '', file: '' },
-      vehicleService: { date: '', file: '' },
-      oemService: { date: '', file: '' },
-      roadTax: { date: '', file: '' }
-    }
-  }
-]
-
+  ]
 };
 
 const EXPORT_EXCLUDE_IDS = new Set();
-// 🔑 SAVE FULL STATE TO GOOGLE SHEET (FORM POST – NO CORS)
+
 async function saveToSheet(data) {
   if (!appReady) return;
-
   try {
     const formData = new URLSearchParams();
     formData.append('data', JSON.stringify(data));
-
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      body: formData   // ⚠️ NO headers (prevents CORS)
-    });
-
+    const res = await fetch(API_URL, { method: 'POST', body: formData });
     const text = await res.text();
     console.log('✅ Saved to Google Sheet:', text);
-
   } catch (err) {
     console.error('❌ Failed to save data to Google Sheet', err);
     alert('Failed to save data to Google Sheet');
   }
 }
-
 </script>
+
 <script>
-// Load data from Google Sheet
 async function loadFromSheet() {
   console.log('🔄 Loading from Google Sheet...');
   if (sheetLoaded) return;
   sheetLoaded = true;
-
   try {
     const res = await fetch(API_URL);
     const data = await res.json();
-
-    if (!data || !Array.isArray(data.items)) {
-      throw new Error('Invalid sheet data');
-    }
-
+    if (!data || !Array.isArray(data.items)) throw new Error('Invalid sheet data');
     state = data;
-// ✅ Ensure vehicle records ALWAYS exist with full structure
-const defaultVehicles = [
-  {
-    id: 'APV-1',
-    name: 'Aerial Platform Vehicle – 1',
-    info: {
-      regNo: 'UP32 ABCDFGHIJ 1234',
-      makeModel: 'Genie Z45',
-      year: '2021'
-    }
-  },
-  {
-    id: 'APV-2',
-    name: 'Aerial Platform Vehicle – 2',
-    info: {
-      regNo: 'UP32 CD 5678',
-      makeModel: 'JLG 450AJ',
-      year: '2021'
-    }
-  }
-];
 
-if (!Array.isArray(state.vehicleRecords)) {
-  state.vehicleRecords = [];
-}
+    const defaultVehicles = [
+      { id:'APV-1', name:'Aerial Platform Vehicle – 15 Mtr', info:{ regNo:'UP32 ABCDFGHIJ 1234', makeModel:'Genie Z45', year:'2021' } },
+      { id:'APV-2', name:'Aerial Platform Vehicle – 11 Mtr', info:{ regNo:'UP32 CD 5678', makeModel:'JLG 450AJ', year:'2021' } }
+    ];
 
-state.vehicleRecords = defaultVehicles.map(def => {
-  const existing = state.vehicleRecords.find(v => v.id === def.id) || {};
+    if (!Array.isArray(state.vehicleRecords)) state.vehicleRecords = [];
 
-  return {
-    id: def.id,
-    name: def.name,
-    info: {
-      regNo: existing.info?.regNo || def.info.regNo,
-      makeModel: existing.info?.makeModel || def.info.makeModel,
-      year: existing.info?.year || def.info.year
-    },
-records: {
-  insurance: existing.records?.insurance || { date: '', file: '' },
-  fitness: existing.records?.fitness || { date: '', file: '' },
-  puc: existing.records?.puc || { date: '', file: '' },
-  vehicleService: existing.records?.vehicleService || { date: '', file: '' },
-  oemService: existing.records?.oemService || { date: '', file: '' },
-  roadTax: existing.records?.roadTax || { date: '', file: '' }
-}
+    state.vehicleRecords = defaultVehicles.map(def => {
+      const existing = state.vehicleRecords.find(v => v.id === def.id) || {};
+      return {
+        id: def.id,
+        name: def.name,
+        info: {
+          regNo: existing.info?.regNo || def.info.regNo,
+          makeModel: existing.info?.makeModel || def.info.makeModel,
+          year: existing.info?.year || def.info.year
+        },
+        records: {
+          insurance:      existing.records?.insurance      || { date:'', file:'' },
+          fitness:        existing.records?.fitness        || { date:'', file:'' },
+          puc:            existing.records?.puc            || { date:'', file:'' },
+          vehicleService: existing.records?.vehicleService || { date:'', file:'' },
+          oemService:     existing.records?.oemService     || { date:'', file:'' },
+          roadTax:        existing.records?.roadTax        || { date:'', file:'' }
+        }
+      };
+    });
 
-  };
-});
-
-
-
-    // Safety
     if (!state.categories.includes('A')) state.categories.push('A');
     if (!state.categories.includes('B')) state.categories.push('B');
 
-
-appReady = true;
-
-// 🔑 Let statechange handle rendering
-document.dispatchEvent(new CustomEvent('statechange'));
+    appReady = true;
+    document.body.classList.add('app-ready');
+    document.dispatchEvent(new CustomEvent('statechange'));
   } catch (err) {
     console.error('Failed to load from Google Sheet:', err);
-	alert('Failed to load inventory from Google Sheet');
+    alert('Failed to load inventory from Google Sheet');
   }
 }
 </script>
@@ -298,855 +582,436 @@ document.dispatchEvent(new CustomEvent('statechange'));
 <script>
 /* ================= LOGIN SYSTEM ================= */
 const ADMIN_PASSWORD = "emd123";
-
-const loginPage = document.getElementById("loginPage");
-const appShell = document.getElementById("appShell");
+const loginPage  = document.getElementById("loginPage");
+const appShell   = document.getElementById("appShell");
 const loginInput = document.getElementById("loginPassword");
-const loginBtn = document.getElementById("loginSubmit");
+const loginBtn   = document.getElementById("loginSubmit");
 const loginError = document.getElementById("loginError");
-const logoutBtn = document.getElementById("logoutBtn");
+const logoutBtn  = document.getElementById("logoutBtn");
 
-function showLogin() {
-  loginPage.classList.remove("hidden");
-  appShell.classList.add("hidden");
-}
-
-function showApp() {
-  loginPage.classList.add("hidden");
-  appShell.classList.remove("hidden");
-}
-
-function isLoggedIn() {
-  return localStorage.getItem("isAdmin") === "true";
-}
-
-function requireAdmin() {
-  if (!isLoggedIn()) {
-    alert("Admin login required");
-    showLogin();
-    return false;
-  }
-  return true;
-}
+function showLogin() { loginPage.classList.remove("hidden"); appShell.classList.add("hidden"); }
+function showApp()   { loginPage.classList.add("hidden");    appShell.classList.remove("hidden"); }
+function isLoggedIn(){ return localStorage.getItem("isAdmin") === "true"; }
+function requireAdmin(){ if(!isLoggedIn()){ alert("Admin login required"); showLogin(); return false; } return true; }
 
 loginBtn.onclick = doLogin;
 
 function doLogin() {
-  const btn = loginBtn;
   const spinner = document.getElementById('loginSpinner');
-  const text = document.getElementById('loginBtnText');
-
-  // show loading
-  btn.disabled = true;
+  const text    = document.getElementById('loginBtnText');
+  loginBtn.disabled = true;
   spinner.classList.remove('hidden');
   text.textContent = 'Logging in...';
   loginError.classList.add('hidden');
 
-  // simulate async login (future-proof)
   setTimeout(() => {
     if (loginInput.value === ADMIN_PASSWORD) {
-      localStorage.setItem("isAdmin", "true");
+      localStorage.setItem("isAdmin","true");
       loginInput.value = "";
-
       showApp();
       injectHoverStyles();
-
       sheetLoaded = false;
       loadFromSheet();
     } else {
       loginError.classList.remove("hidden");
     }
-
-    // reset button
-    btn.disabled = false;
+    loginBtn.disabled = false;
     spinner.classList.add('hidden');
     text.textContent = 'Login';
-  }, 500); // small delay for smooth UX
+  }, 500);
 }
 
-
-
-
-// ✅ ENTER KEY SUPPORT
-loginInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    doLogin();
-  }
-});
+loginInput.addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
 
 logoutBtn.onclick = () => {
   localStorage.removeItem("isAdmin");
-
   sheetLoaded = false;
   appReady = false;
-
-  // Reset clean default state
+  document.body.classList.remove('app-ready');
   state = {
-    categories: ['A','B'],
-    items: [],
+    categories: ['A','B'], items: [],
     vehicleRecords: [
-      {
-        id: 'APV-1',
-        name: 'Aerial Platform Vehicle – 1',
-        info: {
-          regNo: 'UP32 ABCDFGHIJ 1234',
-          makeModel: 'Genie Z45',
-          year: '2021'
-        },
-        records: {
-          insurance: { date: '', file: '' },
-          fitness: { date: '', file: '' },
-          puc: { date: '', file: '' },
-          vehicleService: { date: '', file: '' },
-          oemService: { date: '', file: '' },
-          roadTax: { date: '', file: '' }
-        }
+      { id:'APV-1', name:'Aerial Platform Vehicle – 1',
+        info:{ regNo:'UP32 ABCDFGHIJ 1234', makeModel:'Genie Z45', year:'2021' },
+        records:{ insurance:{date:'',file:''}, fitness:{date:'',file:''}, puc:{date:'',file:''},
+                  vehicleService:{date:'',file:''}, oemService:{date:'',file:''}, roadTax:{date:'',file:''} }
       },
-      {
-        id: 'APV-2',
-        name: 'Aerial Platform Vehicle – 2',
-        info: {
-          regNo: 'UP32 CD 5678',
-          makeModel: 'JLG 450AJ',
-          year: '2021'
-        },
-        records: {
-          insurance: { date: '', file: '' },
-          fitness: { date: '', file: '' },
-          puc: { date: '', file: '' },
-          vehicleService: { date: '', file: '' },
-          oemService: { date: '', file: '' },
-          roadTax: { date: '', file: '' }
-        }
+      { id:'APV-2', name:'Aerial Platform Vehicle – 2',
+        info:{ regNo:'UP32 CD 5678', makeModel:'JLG 450AJ', year:'2021' },
+        records:{ insurance:{date:'',file:''}, fitness:{date:'',file:''}, puc:{date:'',file:''},
+                  vehicleService:{date:'',file:''}, oemService:{date:'',file:''}, roadTax:{date:'',file:''} }
       }
     ]
   };
-
   showLogin();
 };
 
-
-
-// INITIAL LOAD (PAGE REFRESH SAFE)
-sheetLoaded = false;
-appReady = false;
-
+sheetLoaded = false; appReady = false;
 if (isLoggedIn()) {
-  showApp();
-  injectHoverStyles();
-
-  sheetLoaded = false;   // 🔑 RESET FLAGS ON REFRESH
-  appReady = false;
-
-  loadFromSheet();       // 🔑 FETCH FROM GOOGLE SHEET
-} else {
-  showLogin();
-}
-
-
-
-
+  showApp(); injectHoverStyles(); sheetLoaded=false; appReady=false; loadFromSheet();
+} else { showLogin(); }
 </script>
 
-
-
-
 <script>
-
+/* ================= STATE HELPERS ================= */
 function cleanupMainCategoryHistory() {
   let changed = false;
-
   const cleanedItems = state.items.map(item => {
-    if (item.category === 'A' || item.category === 'B') {
-      if ((item.history || []).length > 0) {
-        changed = true;
-        return { ...item, history: [] };
-      }
-    }
-    return item;
+    if ((item.category==='A'||item.category==='B') && (item.history||[]).length>0) {
+      changed=true; return {...item,history:[]};
+    } return item;
   });
-
-  if (!changed) {
-    alert('No history found for A / B items');
-    return;
-  }
-
-  state = {
-    ...state,
-    items: cleanedItems
-  };
-
-saveToSheet(state);
-
-
+  if(!changed){ alert('No history found for A / B items'); return; }
+  state = {...state, items:cleanedItems};
+  saveToSheet(state);
   alert('History for A and B items deleted successfully');
 }
 
 let undoTimer = null; let currentUndo = null;
 let currentPieFilter = null;
-let pendingBackup = null; // holds parsed backup before restore
-// NEW: recent limit state for Home
+let pendingBackup = null;
 let recentLimit = 10;
 
-function pushUndo(text,revert,timeout=6000){ currentUndo = {text,revert}; renderUndo(); if(undoTimer) clearTimeout(undoTimer); undoTimer = setTimeout(()=>{ currentUndo=null; renderUndo(); }, timeout); }
+function pushUndo(text,revert,timeout=6000){
+  currentUndo={text,revert};
+  renderUndo();
+  if(undoTimer) clearTimeout(undoTimer);
+  undoTimer=setTimeout(()=>{ currentUndo=null; renderUndo(); }, timeout);
+}
 function clearUndo(){ if(undoTimer) clearTimeout(undoTimer); undoTimer=null; currentUndo=null; renderUndo(); }
+
 function persist(fn) {
   state = fn(JSON.parse(JSON.stringify(state)));
-
-  if (appReady) {
-    saveToSheet(state);
-  } else {
-    console.warn('⏸️ Persist skipped — app not ready');
-  }
-
-
-  try {
-    document.dispatchEvent(new CustomEvent('statechange'));
-  } catch (e) {}
+  if(appReady) saveToSheet(state);
+  else console.warn('⏸️ Persist skipped — app not ready');
+  try { document.dispatchEvent(new CustomEvent('statechange')); } catch(e){}
 }
 
-
-
-function addCategory(name){ if(!name) return; if(state.categories.includes(name)) return; persist(d=>({...d, categories:[...d.categories,name]})); }
-function editCategory(oldn,newn){ if(!newn||oldn===newn) return; persist(d=>({...d, categories:d.categories.map(c=>c===oldn?newn:c), items:d.items.map(it=> it.category===oldn?{...it,category:newn}:it) })); }
-function deleteCategory(name){ const snap = JSON.parse(JSON.stringify(state)); persist(d=>({...d, categories:d.categories.filter(c=>c!==name), items:d.items.map(it=> it.category===name?{...it,category:'Uncategorized'}:it)})); pushUndo('Deleted category '+name, ()=>{
-  state = snap;
-  saveToSheet(state);
-  document.dispatchEvent(new CustomEvent('statechange'));
-});
- }
-function addItem(item){
-  if (!requireAdmin()) return;
-  item.location = item.location || '';
-  persist(d=>({...d, items:[item,...d.items]}));
-}
-function updateItem(id, patch) {
-  if (!requireAdmin()) return;
-
-  persist(d => ({
-    ...d,
-    items: d.items.map(it => {
-      if (it.id !== id) return it;
-
-      const updated = { ...it, ...patch };
-
-      // IMPORTANT: only touch history if explicitly provided
-      if ('history' in patch) {
-        updated.history = Array.isArray(patch.history)
-          ? patch.history
-          : [];
-      }
-
-      return updated;
-    })
-  }));
-}
-
-
-function deleteItem(id){
-  if (!requireAdmin()) return;
+function addCategory(name){ if(!name) return; if(state.categories.includes(name)) return; persist(d=>({...d,categories:[...d.categories,name]})); }
+function editCategory(oldn,newn){ if(!newn||oldn===newn) return; persist(d=>({...d,categories:d.categories.map(c=>c===oldn?newn:c),items:d.items.map(it=>it.category===oldn?{...it,category:newn}:it)})); }
+function deleteCategory(name){
   const snap=JSON.parse(JSON.stringify(state));
-  persist(d=>({...d, items:d.items.filter(i=>i.id!==id)}));
- pushUndo('Deleted item', ()=>{
-  state = snap;
-  saveToSheet(state);
-  document.dispatchEvent(new CustomEvent('statechange'));
-});
-
+  persist(d=>({...d,categories:d.categories.filter(c=>c!==name),items:d.items.map(it=>it.category===name?{...it,category:'Uncategorized'}:it)}));
+  pushUndo('Deleted category '+name,()=>{ state=snap; saveToSheet(state); document.dispatchEvent(new CustomEvent('statechange')); });
 }
-function recordConsumption(itemId, amount, note = 'Consumed',entryDate = '') {
-  if (!requireAdmin()) return;
-
-  persist(d => ({
-    ...d,
-    items: d.items.map(it => {
-      if (it.id !== itemId) return it;
-
-      const newQty = Math.max(0, Number(it.qty) - Number(amount));
-
-      return {
-        ...it,
-        qty: newQty,
-        history: [
-          {
-            id: uid(),
-            date: entryDate || new Date().toISOString().slice(0,10), 
-            amount: Number(amount),
-            note 
-			
-          },
-          ...(it.history || [])
-        ]
-      };
-    })
-  }));
+function addItem(item){
+  if(!requireAdmin()) return;
+  item.location=item.location||'';
+  persist(d=>({...d,items:[item,...d.items]}));
 }
-
-
-function deleteActivity(itemId,entryId){ const it = state.items.find(i=>i.id===itemId); if(!it) return; const entry = (it.history||[]).find(h=>h.id===entryId); if(!entry) return; persist(d=>({...d, items:d.items.map(i=> i.id===itemId?{...i, history:(i.history||[]).filter(h=>h.id!==entryId)}:i)})); pushUndo('Deleted activity', ()=>{ persist(d=>({...d, items:d.items.map(i=> i.id===itemId?{...i, history:[entry,...(i.history||[])]}:i)})); }); }
-function computeQtyFromHistory(item) {
-  return (item.history || []).reduce((sum, h) => {
-    if (h.note === 'Stock added') return sum + Number(h.amount || 0);
-    return sum - Number(h.amount || 0);
-  }, 0);
+function updateItem(id,patch){
+  if(!requireAdmin()) return;
+  persist(d=>({...d,items:d.items.map(it=>{
+    if(it.id!==id) return it;
+    const updated={...it,...patch};
+    if('history' in patch) updated.history=Array.isArray(patch.history)?patch.history:[];
+    return updated;
+  })}));
 }
+function deleteItem(id){
+  if(!requireAdmin()) return;
+  const snap=JSON.parse(JSON.stringify(state));
+  persist(d=>({...d,items:d.items.filter(i=>i.id!==id)}));
+  pushUndo('Deleted item',()=>{ state=snap; saveToSheet(state); document.dispatchEvent(new CustomEvent('statechange')); });
+}
+function recordConsumption(itemId,amount,note='Consumed',entryDate=''){
+  if(!requireAdmin()) return;
+  persist(d=>({...d,items:d.items.map(it=>{
+    if(it.id!==itemId) return it;
+    return { ...it, qty:Math.max(0,Number(it.qty)-Number(amount)),
+      history:[{id:uid(),date:entryDate||new Date().toISOString().slice(0,10),amount:Number(amount),note},...(it.history||[])]
+    };
+  })}));
+}
+function deleteActivity(itemId,entryId){
+  const it=state.items.find(i=>i.id===itemId); if(!it) return;
+  const entry=(it.history||[]).find(h=>h.id===entryId); if(!entry) return;
+  persist(d=>({...d,items:d.items.map(i=>i.id===itemId?{...i,history:(i.history||[]).filter(h=>h.id!==entryId)}:i)}));
+  pushUndo('Deleted activity',()=>{ persist(d=>({...d,items:d.items.map(i=>i.id===itemId?{...i,history:[entry,...(i.history||[])]}:i)})); });
+}
+function computeQtyFromHistory(item){
+  return (item.history||[]).reduce((sum,h)=>h.note==='Stock added'?sum+Number(h.amount||0):sum-Number(h.amount||0),0);
+}
+</script>
 
-// ---------- EXPORT LOGIC (XLSX) ----------
+<script>
+/* ================= EXPORT / IMPORT ================= */
 function exportExcel() {
   try {
-    console.log('[exportExcel] started');
+    if(typeof XLSX==='undefined'){ alert('XLSX not loaded'); return; }
+    const wb=XLSX.utils.book_new();
+    const belongsToMain=(it,main)=>it.category===main||it.category.startsWith(main+' /');
+    const usedNames=new Set(); const idToSheetName={};
+    const itemsToExport=state.items.filter(it=>it&&!EXPORT_EXCLUDE_IDS.has(it.id));
+    const pendingHistorySheets=[];
 
-    if (typeof XLSX === 'undefined') {
-      alert('XLSX not loaded');
-      return;
-    }
-
-    const wb = XLSX.utils.book_new();
-
-    const belongsToMain = (it, main) =>
-      it.category === main || it.category.startsWith(main + ' /');
-
-    const usedNames = new Set();
-    const idToSheetName = {};
-    const itemsToExport = state.items.filter(
-      it => it && !EXPORT_EXCLUDE_IDS.has(it.id)
-    );
-
-    // -----------------------------
-    // 1) BUILD HISTORY SHEETS FIRST
-    // -----------------------------
-    const pendingHistorySheets = [];
-
-   itemsToExport
-  .filter(it =>
-    typeof it.category === 'string' &&
-    (it.category.startsWith('A /') || it.category.startsWith('B /'))
-  )
-  .forEach(it => {
+    itemsToExport.filter(it=>typeof it.category==='string'&&(it.category.startsWith('A /')||it.category.startsWith('B /'))).forEach(it=>{
       try {
-    const hist = Array.isArray(it.history) && it.history.length
-  ? it.history.slice().sort((a,b)=>new Date(a.date)-new Date(b.date))
-  : [];
-
-if (!hist.length) return;
-
-
-        const rows = hist.map(h => {
-          let d = '';
-          try {
-            d = h.date;
-          } catch {
-            d = String(h.date).slice(0, 10);
-          }
-
-          const signed =
-            h.note === 'Stock added'
-              ? '+' + Number(h.amount || 0)
-              : '-' + Number(h.amount || 0);
-
-          return [d, signed, h.note || '',h.receivedFrom || ''];
-        });
-
-        const aoa = [];
-        aoa.push([it.name || 'Unnamed item']);
-        aoa.push(['Date', 'Quantity', 'Note','Received From']);
-        rows.forEach(r => aoa.push(r));
-
-        const base = `${it.name || 'item'} history`;
-        let sheetName = sanitizeSheetName(base);
-        let n = 1;
-        while (usedNames.has(sheetName)) {
-          const suf = ` ${n++}`;
-          const avail = 31 - suf.length;
-          sheetName = sanitizeSheetName(base.slice(0, avail)) + suf;
-        }
-
-        usedNames.add(sheetName);
-        idToSheetName[it.id] = sheetName;
-
-        const ws = XLSX.utils.aoa_to_sheet(aoa);
-        ws['!cols'] = [{ wpx: 200 }, { wpx: 80 }, { wpx: 320 },{ wpx: 380 } ];
-
-        pendingHistorySheets.push({ title: sheetName, ws });
-      } catch (err) {
-        console.error('history sheet error', err);
-      }
+        const hist=Array.isArray(it.history)&&it.history.length?it.history.slice().sort((a,b)=>new Date(a.date)-new Date(b.date)):[];
+        if(!hist.length) return;
+        const rows=hist.map(h=>[h.date,h.note==='Stock added'?'+'+Number(h.amount||0):'-'+Number(h.amount||0),h.note||'',h.receivedFrom||'']);
+        const aoa=[[it.name||'Unnamed item'],['Date','Quantity','Note','Received From'],...rows];
+        const base=`${it.name||'item'} history`; let sheetName=sanitizeSheetName(base); let n=1;
+        while(usedNames.has(sheetName)){ const suf=` ${n++}`; sheetName=sanitizeSheetName(base.slice(0,31-suf.length))+suf; }
+        usedNames.add(sheetName); idToSheetName[it.id]=sheetName;
+        const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wpx:200},{wpx:80},{wpx:320},{wpx:380}];
+        pendingHistorySheets.push({title:sheetName,ws});
+      } catch(err){ console.error('history sheet error',err); }
     });
 
-    // -----------------------------
-    // 2) CREATE STOCK SHEETS
-    // -----------------------------
-    function buildStockRows(main) {
-      const rows = [];
-      rows.push(['Name', 'Qty', 'Unit', 'Location', 'Category', 'History']);
-
-      state.items
-        .filter(
-          it =>
-            it &&
-            !EXPORT_EXCLUDE_IDS.has(it.id) &&
-            belongsToMain(it, main)
-        )
-        .forEach(it => {
-          rows.push([
-            it.name || '',
-           Number(it.qty || 0),
-            it.unit || '',
-            it.location || '',
-            it.category || main,
-            idToSheetName[it.id] || ''
-          ]);
-        });
-
+    function buildStockRows(main){
+      const rows=[['Name','Qty','Unit','Location','Category','History']];
+      state.items.filter(it=>it&&!EXPORT_EXCLUDE_IDS.has(it.id)&&belongsToMain(it,main)).forEach(it=>{
+        rows.push([it.name||'',Number(it.qty||0),it.unit||'',it.location||'',it.category||main,idToSheetName[it.id]||'']);
+      });
       return rows;
     }
-
-    function appendStockSheet(title, aoaRows) {
-      const ws = XLSX.utils.aoa_to_sheet(aoaRows);
-      ws['!cols'] = [
-        { wpx: 220 },
-        { wpx: 80 },
-        { wpx: 80 },
-        { wpx: 160 },
-        { wpx: 160 },
-        { wpx: 80 }
-      ];
-
-      const range = XLSX.utils.decode_range(ws['!ref']);
-      for (let r = range.s.r + 1; r <= range.e.r; r++) {
-        const cellAddr = XLSX.utils.encode_cell({ c: 5, r });
-        const cell = ws[cellAddr];
-
-        if (cell && typeof cell.v === 'string' && cell.v.trim()) {
-          const sheetName = cell.v.replace(/'/g, "''");
-        ws[cellAddr] = {
-  t: 's',
-  v: 'History',
-  l: {
-    Target: `#'${sheetName}'!A1`,
-    Tooltip: 'View history'
-  }
-};
-
-        } else {
-          ws[cellAddr] = { t: 's', v: '' };
-        }
+    function appendStockSheet(title,aoaRows){
+      const ws=XLSX.utils.aoa_to_sheet(aoaRows);
+      ws['!cols']=[{wpx:220},{wpx:80},{wpx:80},{wpx:160},{wpx:160},{wpx:80}];
+      const range=XLSX.utils.decode_range(ws['!ref']);
+      for(let r=range.s.r+1;r<=range.e.r;r++){
+        const cellAddr=XLSX.utils.encode_cell({c:5,r}); const cell=ws[cellAddr];
+        if(cell&&typeof cell.v==='string'&&cell.v.trim()){
+          const sn=cell.v.replace(/'/g,"''");
+          ws[cellAddr]={t:'s',v:'History',l:{Target:`#'${sn}'!A1`,Tooltip:'View history'}};
+        } else { ws[cellAddr]={t:'s',v:''}; }
       }
-if (!ws['!ref']) {
-  ws['!ref'] = 'A1';
-}
-
-      XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(title));
+      if(!ws['!ref']) ws['!ref']='A1';
+      XLSX.utils.book_append_sheet(wb,ws,sanitizeSheetName(title));
     }
 
-    appendStockSheet('Stocks - A', buildStockRows('A'));
-    appendStockSheet('Stocks - B', buildStockRows('B'));
-
-    // -----------------------------
-    // 3) APPEND HISTORY SHEETS
-    // -----------------------------
-    pendingHistorySheets.forEach(s =>
-      XLSX.utils.book_append_sheet(wb, s.ws, s.title)
-    );
-
-    // -----------------------------
-    // 4) SAVE FILE
-    // -----------------------------
-    XLSX.writeFile(wb, `inventory_${Date.now()}.xlsx`);
-    console.log('Export complete');
-
-  } catch (err) {
-    console.error('Export failed:', err);
-    alert('Export failed — see console');
-  }
+    appendStockSheet('Stocks - A',buildStockRows('A'));
+    appendStockSheet('Stocks - B',buildStockRows('B'));
+    pendingHistorySheets.forEach(s=>XLSX.utils.book_append_sheet(wb,s.ws,s.title));
+    XLSX.writeFile(wb,`inventory_${Date.now()}.xlsx`);
+  } catch(err){ console.error('Export failed:',err); alert('Export failed — see console'); }
 }
 
+function exportCSV(){ exportExcel(); }
+function importCSV(file,opts={merge:true}){
+  return new Promise((resolve,reject)=>{
+    Papa.parse(file,{header:true,skipEmptyLines:true,complete:(res)=>{
+      const rows=res.data.map(r=>({id:r.id||uid(),name:r.name,category:r.category||'Uncategorized',qty:Number(r.qty||0),unit:r.unit||'pcs',location:r.location||'',history:[]}));
+      persist(d=>opts.merge?({...d,categories:Array.from(new Set([...d.categories,...rows.map(r=>r.category)])),items:[...rows,...d.items]}):({...d,categories:Array.from(new Set(rows.map(r=>r.category))),items:rows}));
+      resolve(rows.length);
+    },error:reject});
+  });
+}
 
-// ---------- IMPORT LOGIC (TRUE BACKUP RESTORE) ----------
-function importExcelBackup(file) {
-  if (!requireAdmin()) return;
-
-  const reader = new FileReader();
-
-  reader.onload = (e) => {
-    const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-
-    const items = [];
-    const categories = new Set(['A', 'B']);
-
-    // ---------- READ STOCK SHEETS ----------
-    ['Stocks - A', 'Stocks - B'].forEach(sheetName => {
-      const ws = wb.Sheets[sheetName];
-      if (!ws) return;
-
-      const range = XLSX.utils.decode_range(ws['!ref']);
-
-      for (let r = range.s.r + 1; r <= range.e.r; r++) {
-        const get = c => ws[XLSX.utils.encode_cell({ c, r })];
-
-        const nameCell = get(0);
-        if (!nameCell || !nameCell.v) continue;
-
-        const qtyCell = get(1);
-        const unitCell = get(2);
-        const locCell = get(3);
-        const catCell = get(4);
-        const histCell = get(5);
-
-        let historySheet = '';
-        if (histCell && histCell.f) {
-          const m = histCell.f.match(/#'(.+?)'!/);
-          if (m) historySheet = m[1];
-        }
-
-        const category = catCell?.v || (sheetName.includes('A') ? 'A' : 'B');
+function importExcelBackup(file){
+  if(!requireAdmin()) return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+    const items=[]; const categories=new Set(['A','B']);
+    ['Stocks - A','Stocks - B'].forEach(sheetName=>{
+      const ws=wb.Sheets[sheetName]; if(!ws) return;
+      const range=XLSX.utils.decode_range(ws['!ref']);
+      for(let r=range.s.r+1;r<=range.e.r;r++){
+        const get=c=>ws[XLSX.utils.encode_cell({c,r})];
+        const nameCell=get(0); if(!nameCell||!nameCell.v) continue;
+        const qtyCell=get(1),unitCell=get(2),locCell=get(3),catCell=get(4),histCell=get(5);
+        let historySheet='';
+        if(histCell&&histCell.f){ const m=histCell.f.match(/#'(.+?)'!/); if(m) historySheet=m[1]; }
+        const category=catCell?.v||(sheetName.includes('A')?'A':'B');
         categories.add(category);
-
-        items.push({
-          id: uid(),
-          name: String(nameCell.v),
-          qty: Number(qtyCell?.v || 0),
-          unit: unitCell?.v || '',
-          location: locCell?.v || '',
-		    receivedFrom: '',
-          category,
-          historySheet,
-          history: []
-        });
+        items.push({id:uid(),name:String(nameCell.v),qty:Number(qtyCell?.v||0),unit:unitCell?.v||'',location:locCell?.v||'',receivedFrom:'',category,historySheet,history:[]});
       }
     });
-    // ---------- READ HISTORY SHEETS ----------
-   items.forEach(item => {
-  if (!item.historySheet) return;
-
-  const ws = wb.Sheets[item.historySheet];
-  if (!ws) return;
-
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
-
-  rows.slice(2).forEach(r => {
-    if (!r[0] || !r[1]) return;
-
-    const raw = String(r[1]).trim();
-    const signed = Number(raw.replace('+', ''));
-    const isAdded = raw.startsWith('+');
-
-    item.history.push({
-  id: uid(),
-  itemId: item.id,   // 🔑 REQUIRED
-  date: new Date(r[0]).toISOString(),
-  amount: Math.abs(signed),
-  note: isAdded ? 'Stock added' : (r[2] || 'Consumed')
-});
-
-  });
-});
-
-    items.forEach(i => delete i.historySheet);
-// 🔁 Recalculate quantity from history (source of truth)
-items.forEach(item => {
-  if (item.history && item.history.length) {
-    item.qty = computeQtyFromHistory(item);
-  }
-});
-
-    // --- PREVIEW ONLY ---
-    pendingBackup = {
-      categories: Array.from(categories),
-      items
-    };
-
+    items.forEach(item=>{
+      if(!item.historySheet) return;
+      const ws=wb.Sheets[item.historySheet]; if(!ws) return;
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+      rows.slice(2).forEach(r=>{
+        if(!r[0]||!r[1]) return;
+        const raw=String(r[1]).trim(); const signed=Number(raw.replace('+','')); const isAdded=raw.startsWith('+');
+        item.history.push({id:uid(),itemId:item.id,date:new Date(r[0]).toISOString(),amount:Math.abs(signed),note:isAdded?'Stock added':(r[2]||'Consumed')});
+      });
+    });
+    items.forEach(i=>delete i.historySheet);
+    items.forEach(item=>{ if(item.history&&item.history.length) item.qty=computeQtyFromHistory(item); });
+    pendingBackup={categories:Array.from(categories),items};
     showBackupPreview(pendingBackup);
   };
-
   reader.readAsArrayBuffer(file);
 }
 
-
-// ---------- end exportExcel ----------
-
-function exportCSV(){ exportExcel(); }
-function importCSV(file,opts={merge:true}){ return new Promise((resolve,reject)=>{ Papa.parse(file,{header:true,skipEmptyLines:true,complete:(res)=>{ const rows=res.data.map(r=>({id:r.id||uid(),name:r.name,category:r.category||'Uncategorized',qty:Number(r.qty||0),unit:r.unit||'pcs',location:r.location||'',history:[]})); persist(d=> opts.merge?({...d, categories:Array.from(new Set([...d.categories,...rows.map(r=>r.category)])), items:[...rows,...d.items]}) : ({...d, categories:Array.from(new Set(rows.map(r=>r.category))), items:rows})); resolve(rows.length); }, error:reject }); }); }
-
-function showBackupPreview(data) {
-  const totalItems = data.items.length;
-  const totalCategories = data.categories.length;
-  const totalHistory = data.items.reduce(
-    (s, i) => s + (i.history?.length || 0),
-    0
-  );
-
-  const modal = document.createElement('div');
-  modal.className =
-    'fixed inset-0 bg-black/40 flex items-center justify-center z-50';
-
-  modal.innerHTML = `
+function showBackupPreview(data){
+  const totalItems=data.items.length,totalCategories=data.categories.length;
+  const totalHistory=data.items.reduce((s,i)=>s+(i.history?.length||0),0);
+  const modal=document.createElement('div');
+  modal.className='fixed inset-0 bg-black/40 flex items-center justify-center z-50';
+  modal.innerHTML=`
     <div class="bg-white rounded-lg p-6 w-[520px] max-h-[80vh] overflow-auto">
       <h2 class="text-xl font-bold mb-2">Backup Preview</h2>
-
       <div class="text-sm text-slate-700 space-y-1 mb-4">
-        <div><b>Items:</b> ${totalItems}</div>
-        <div><b>Categories:</b> ${totalCategories}</div>
+        <div><b>Items:</b> ${totalItems}</div><div><b>Categories:</b> ${totalCategories}</div>
         <div><b>History entries:</b> ${totalHistory}</div>
       </div>
-
       <h3 class="font-semibold mb-2">Sample items</h3>
       <ul class="text-sm border rounded p-2 mb-4 max-h-40 overflow-auto">
-        ${data.items.slice(0, 10).map(i =>
-          `<li>• ${i.name} — ${i.qty} ${i.unit} (${i.category})</li>`
-        ).join('')}
+        ${data.items.slice(0,10).map(i=>`<li>• ${i.name} — ${i.qty} ${i.unit} (${i.category})</li>`).join('')}
       </ul>
-
       <div class="bg-yellow-50 border border-yellow-300 text-yellow-800 p-2 rounded text-sm mb-4">
         ⚠ This will <b>overwrite all current inventory data</b>.
       </div>
-
       <div class="flex justify-end gap-3">
-        <button id="cancelRestore"
-          class="px-4 py-2 border rounded">
-          Cancel
-        </button>
-        <button id="confirmRestore"
-          class="px-4 py-2 bg-red-600 text-white rounded">
-          Restore Backup
-        </button>
+        <button id="cancelRestore" class="px-4 py-2 border rounded">Cancel</button>
+        <button id="confirmRestore" class="px-4 py-2 bg-red-600 text-white rounded">Restore Backup</button>
       </div>
-    </div>
-  `;
-
+    </div>`;
   document.body.appendChild(modal);
-
-  modal.querySelector('#cancelRestore').onclick = () => {
-    pendingBackup = null;
-    modal.remove();
-  };
-
-  modal.querySelector('#confirmRestore').onclick = () => {
-state = pendingBackup;
-
-// 🚫 Remove history from main categories A & B
-state.items = state.items.map(it => {
-  // wipe history ONLY if item is DIRECTLY in A or B (no slash)
-  if (
-    (it.category === 'A' || it.category === 'B') &&
-    (!it.category.includes('/'))
-  ) {
-    return { ...it, history: [] };
-  }
-  return it;
-});
-
-
-saveToSheet(state);
-document.dispatchEvent(new CustomEvent('statechange'));
-
-    pendingBackup = null;
-    modal.remove();
-    alert('Backup restored successfully');
+  modal.querySelector('#cancelRestore').onclick=()=>{ pendingBackup=null; modal.remove(); };
+  modal.querySelector('#confirmRestore').onclick=()=>{
+    state=pendingBackup;
+    state.items=state.items.map(it=>{
+      if((it.category==='A'||it.category==='B')&&!it.category.includes('/')) return {...it,history:[]};
+      return it;
+    });
+    saveToSheet(state);
+    document.dispatchEvent(new CustomEvent('statechange'));
+    pendingBackup=null; modal.remove(); alert('Backup restored successfully');
   };
 }
 </script>
 
 <script>
-// DOM & routing
+/* ================= ROUTING ================= */
 const app = document.getElementById('app');
 
 window.addEventListener('hashchange', () => {
-  if (isLoggedIn() && appReady) {
-    routeRender();
-  }
+  if(isLoggedIn()&&appReady){ routeRender(); updateNavActive(); }
 });
 
-</script>
-
-
-<script>
 if(!window.__statechange_attached){
-  window.__statechange_attached = true;
-  document.addEventListener('statechange', ()=>{
-    const h = (location.hash && location.hash.startsWith('#'))
-      ? location.hash.slice(1)
-      : (location.hash || '/');
-
-    try{
-      if(h.startsWith('/categories')) renderCategories();
-      else if(h.startsWith('/category/')) {
-        const name = decodeURIComponent(h.split('/')[2]||'');
-        renderCategory(name);
-      }
-      else if(h.startsWith('/sync')) renderSync();
+  window.__statechange_attached=true;
+  document.addEventListener('statechange',()=>{
+    const h=(location.hash&&location.hash.startsWith('#'))?location.hash.slice(1):(location.hash||'/');
+    try {
+      if(h.startsWith('/categories'))    renderCategories();
+      else if(h.startsWith('/category/')) renderCategory(decodeURIComponent(h.split('/')[2]||''));
+      else if(h.startsWith('/sync'))      renderSync();
       else if(h.startsWith('/activities')) renderAllActivities();
-else if(h.startsWith('/vehicles')) renderVehicleRecords();
-else renderHome();
-    }catch(e){
-       console.warn('Render skipped (functions not ready yet)');
-    }
+      else if(h.startsWith('/vehicles'))   renderVehicleRecords();
+      else renderHome();
+    } catch(e){ console.warn('Render skipped (functions not ready yet)'); }
+    updateNavActive();
   });
 }
 
 function routeRender(){
- if (typeof renderHome !== 'function') return;
-  if (!appReady) return;   // 🔒 STOP rendering before sheet loads
-  const h = (location.hash && location.hash.startsWith('#'))
-    ? location.hash.slice(1)
-    : (location.hash || '/');
-
-  if (h.startsWith('/category/')) {
-    const name = decodeURIComponent(h.split('/')[2]||'');
-    renderCategory(name);
-  } else if (h.startsWith('/categories/')) {
-    const name = decodeURIComponent(h.split('/')[2]||'');
-    renderCategory(name);
-  } else if (h.startsWith('/categories')) {
-    renderCategories();
-  } else if (h.startsWith('/sync')) {
-    renderSync();
-  } else if (h.startsWith('/activities')) {
-    renderAllActivities();
-  } 
-  else if (h.startsWith('/vehicles')) renderVehicleRecords();
-  else {
-    renderHome();
-  }
+  if(typeof renderHome!=='function') return;
+  if(!appReady) return;
+  const h=(location.hash&&location.hash.startsWith('#'))?location.hash.slice(1):(location.hash||'/');
+  if(h.startsWith('/category/'))       renderCategory(decodeURIComponent(h.split('/')[2]||''));
+  else if(h.startsWith('/categories/'))renderCategory(decodeURIComponent(h.split('/')[2]||''));
+  else if(h.startsWith('/categories')) renderCategories();
+  else if(h.startsWith('/sync'))       renderSync();
+  else if(h.startsWith('/activities')) renderAllActivities();
+  else if(h.startsWith('/vehicles'))   renderVehicleRecords();
+  else renderHome();
 }
 </script>
 
 <script>
-function uid() {
-  return (
-    Date.now().toString(36) +
-    Math.random().toString(36).slice(2, 8)
-  );
+/* ================= UTILITIES ================= */
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function sanitizeSheetName(name){ return String(name).replace(/[\\\/\?\*\[\]]/g,'').substring(0,31)||'Sheet'; }
+
+function renderUndo(){
+  const old=document.getElementById('undo-snack'); if(old) old.remove();
+  if(!currentUndo) return;
+  const box=el('div',{id:'undo-snack',class:'fixed left-6 bottom-6 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 z-50'},[
+    currentUndo.text,
+    el('button',{class:'underline font-semibold text-sky-300',onclick:()=>{ if(currentUndo.revert) currentUndo.revert(); clearUndo(); }},'Undo'),
+    el('button',{class:'text-xs px-2 py-1 border border-white/30 rounded-lg bg-white/10 text-white',onclick:clearUndo},'Dismiss')
+  ]);
+  document.body.appendChild(box);
 }
-function renderUndo(){ const old = document.getElementById('undo-snack'); if(old) old.remove(); if(!currentUndo) return; const box = el('div',{id:'undo-snack', class:'fixed left-6 bottom-6 bg-slate-900 text-white px-4 py-2 rounded shadow flex items-center gap-3 z-50'}, [ currentUndo.text, el('button',{class:'underline', onclick:()=>{ if(currentUndo.revert) currentUndo.revert(); clearUndo(); }},'Undo'), el('button',{class:'text-xs px-2 py-1 border rounded bg-white text-slate-900', onclick:clearUndo}, 'Dismiss') ]); document.body.appendChild(box); }
-function sanitizeSheetName(name) {
-  return String(name)
-    .replace(/[\\\/\?\*\[\]]/g, '')  // invalid Excel chars
-    .substring(0, 31)                // Excel max length
-    || 'Sheet';
-}
-/* helpers */
-function el(tag,attrs={},children=[]){ const SVG_TAGS = new Set(['svg','path','circle','rect','text','g','line','polyline','polygon','ellipse']); const SVG_NS = 'http://www.w3.org/2000/svg'; const isSvg = SVG_TAGS.has(tag);
-  const d = isSvg ? document.createElementNS(SVG_NS, tag) : document.createElement(tag);
+
+function el(tag,attrs={},children=[]){
+  const SVG_TAGS=new Set(['svg','path','circle','rect','text','g','line','polyline','polygon','ellipse']);
+  const SVG_NS='http://www.w3.org/2000/svg';
+  const isSvg=SVG_TAGS.has(tag);
+  const d=isSvg?document.createElementNS(SVG_NS,tag):document.createElement(tag);
   for(const k in attrs){
-    if(k==='class') d.className = attrs[k];
-    else if(k==='html') d.innerHTML = attrs[k];
-    else if(k.startsWith('on') && typeof attrs[k]==='function') d.addEventListener(k.slice(2), attrs[k]);
-    else d.setAttribute(k, attrs[k]);
+    if(k==='class') d.className=attrs[k];
+    else if(k==='html') d.innerHTML=attrs[k];
+    else if(k.startsWith('on')&&typeof attrs[k]==='function') d.addEventListener(k.slice(2),attrs[k]);
+    else d.setAttribute(k,attrs[k]);
   }
-  (Array.isArray(children)?children:[children]).forEach(c=>{ if(c==null) return; if(typeof c==='string'||typeof c==='number') d.appendChild(document.createTextNode(String(c))); else d.appendChild(c); });
-  return d; }
+  (Array.isArray(children)?children:[children]).forEach(c=>{
+    if(c==null) return;
+    if(typeof c==='string'||typeof c==='number') d.appendChild(document.createTextNode(String(c)));
+    else d.appendChild(c);
+  });
+  return d;
+}
 function clear(elm){ while(elm.firstChild) elm.removeChild(elm.firstChild); }
+</script>
 
+<script>
+/* ================= PAGE RENDERERS ================= */
 
-
-/* PAGES */
-
-function renderSync() {
+/* ---- SYNC / EXPORT ---- */
+function renderSync(){
   clear(app);
-
   app.appendChild(
-    el(
-      'div',
-      {
-        class:
-          'bg-white p-6 rounded shadow grid grid-cols-1 md:grid-cols-2 gap-6 items-center'
-      },
-      [
-
-        // LEFT: Image
-        el('div', { class: 'flex justify-center' }, [
-          el('img', {
-            src: 'export-illustration.png',   // 👈 CHANGE TO YOUR IMAGE FILE NAME
-            alt: 'Export illustration',
-            class: 'max-w-full h-auto rounded'
-          })
-        ]),
-
-        // RIGHT: Export content
-        el('div', { class: 'space-y-4' }, [
-          el('h2', { class: 'text-xl font-semibold' }, 'Export Data'),
-
-          el(
-            'p',
-            { class: 'text-sm text-slate-600' },
-            'Export all items data with consumption history '
-          ),
-
-          el(
-            'button',
-            {
-              class: 'px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded shadow-sm font-semibold',
-              onclick: exportExcel
-            },
-            'Export Excel '
-          )
-        ])
-      ]
-    )
+    el('div',{class:'bg-white p-6 rounded-xl shadow grid grid-cols-1 md:grid-cols-2 gap-6 items-center'},[
+      el('div',{class:'flex justify-center'},[
+        el('img',{src:'export-illustration.png',alt:'Export illustration',class:'max-w-full h-auto rounded'})
+      ]),
+      el('div',{class:'space-y-4'},[
+        el('h2',{class:'text-xl font-semibold'},'Export Data'),
+        el('p',{class:'text-sm text-slate-600'},'Export all items data with consumption history'),
+        el('button',{class:'px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded shadow-sm font-semibold btn-export',onclick:exportExcel},'Export Excel ↓')
+      ])
+    ])
   );
 }
 
-
-// Home now uses recentLimit and a Load more / Show less button
+/* ---- HOME ---- */
 function renderHome(){
   clear(app);
-  const overview = el(
-  'section',
-  { class: 'bg-white p-6 rounded shadow no-pop' },
-  [
-    el(
-      'h2',
-      { class: 'text-lg font-semibold mb-5' },
-      'Overview'
-    ),
 
-    // 🔹 Wider, better-spaced container
-    el(
-      'div',
-      {
-        class:
-          'flex flex-col lg:flex-row items-center justify-between gap-10'
-      },
-      [
-        // Chart area
-        el(
-          'div',
-          {
-            class:
-              'flex-1 flex justify-center'
-          },
-          renderCategoryPie()
-        )
-      ]
-    )
-  ]
-);
+  // Metric cards
+  app.appendChild(renderMetricCards());
 
+  const overview=el('section',{class:'bg-white p-6 rounded-xl shadow no-pop'},[
+    el('h2',{class:'text-lg font-semibold mb-5'},'Overview'),
+    el('div',{class:'flex flex-col lg:flex-row items-center justify-between gap-10'},[
+      el('div',{class:'flex-1 flex justify-center'},renderCategoryPie())
+    ])
+  ]);
 
-  const itemsSection = currentPieFilter ? el('section',{class:'bg-white p-4 rounded shadow mt-4'}, [ el('h2',{class:'text-lg font-semibold mb-2'}, `Items (qty) — ${currentPieFilter}`), renderItemsBar() ]) : null;
+  const itemsSection=currentPieFilter?el('section',{class:'bg-white p-4 rounded-xl shadow mt-4'},[
+    el('h2',{class:'text-lg font-semibold mb-2'},`Items (qty) — ${currentPieFilter}`),
+    renderItemsBar()
+  ]):null;
 
-  const quickA = el('section',{class:'bg-white p-4 rounded shadow mt-4'}, [ el('h2',{class:'text-lg font-semibold mb-2'}, 'Quick Entry — Lighting'), renderQuickForCategory('A') ]);
-  const quickB = el('section',{class:'bg-white p-4 rounded shadow mt-4'}, [ el('h2',{class:'text-lg font-semibold mb-2'}, 'Quick Entry — Cabling'), renderQuickForCategory('B') ]);
+  const quickA=el('section',{class:'bg-white p-4 rounded-xl shadow mt-4'},[
+    el('h2',{class:'text-lg font-semibold mb-2'},'Quick Entry — Lighting'),
+    renderQuickForCategory('A')
+  ]);
+  const quickB=el('section',{class:'bg-white p-4 rounded-xl shadow mt-4'},[
+    el('h2',{class:'text-lg font-semibold mb-2'},'Quick Entry — Cabling'),
+    renderQuickForCategory('B')
+  ]);
 
-  // Recent Activity — controlled by recentLimit
-  const recent = el('section',{class:'bg-white p-4 rounded shadow no-pop mt-4'}, [
-    el('h2',{class:'text-lg font-semibold mb-2'}, 'Recent Activity'),
+  const recent=el('section',{class:'bg-white p-4 rounded-xl shadow no-pop mt-4'},[
+    el('h2',{class:'text-lg font-semibold mb-2'},'Recent Activity'),
     renderRecentActivity(recentLimit),
-    // Load more / Show less button
     (function(){
-      const totalEntries = state.items.flatMap(i=>(i.history||[])).length;
-      if(totalEntries <= 10) return el('div',{class:'text-sm text-slate-500 mt-2'}, `Total entries: ${totalEntries}`);
-      const btn = el('button',{class:'px-3 py-1 mt-3 bg-sky-600 text-white rounded'}, totalEntries > recentLimit ? 'Load more' : 'Show less');
-      btn.addEventListener('click', ()=>{
-        if(totalEntries > recentLimit){
-          recentLimit = Math.min(totalEntries, recentLimit + 10);
-        } else {
-          recentLimit = 10;
-        }
+      const totalEntries=state.items.flatMap(i=>(i.history||[])).length;
+      if(totalEntries<=10) return el('div',{class:'text-sm text-slate-500 mt-2'},`Total entries: ${totalEntries}`);
+      const btn=el('button',{class:'px-3 py-1 mt-3 bg-sky-600 text-white rounded'},totalEntries>recentLimit?'Load more':'Show less');
+      btn.addEventListener('click',()=>{
+        if(totalEntries>recentLimit) recentLimit=Math.min(totalEntries,recentLimit+10);
+        else recentLimit=10;
         document.dispatchEvent(new CustomEvent('statechange'));
       });
-      return el('div',{class:'mt-3'}, btn);
+      return el('div',{class:'mt-3'},btn);
     })()
   ]);
 
@@ -1158,792 +1023,616 @@ function renderHome(){
   renderUndo();
 }
 
+/* ---- PIE CHART ---- */
 function renderCategoryPie(){
   function buildDataForMain(main){
-  const prefix = main + ' / ';
-  const buckets = new Map();
-
-  // Only add subcategories (NOT the main category)
-  (state.categories || []).forEach(c => {
-    if (c.startsWith(prefix)) buckets.set(c, 0);
-  });
-
-  state.items.forEach(it => {
-    if (typeof it.category === 'string' && it.category.startsWith(prefix)) {
-      buckets.set(it.category, (buckets.get(it.category) || 0) + Number(it.qty || 0));
-    }
-  });
-
-  return Array.from(buckets.entries())
-              .map(([k, v]) => ({ name: k, value: v }))
-              .filter(x => x.value > 0);
-
+    const prefix=main+' /'; const buckets=new Map();
+    (state.categories||[]).forEach(c=>{ if(c.startsWith(prefix)) buckets.set(c,0); });
+    state.items.forEach(it=>{ if(typeof it.category==='string'&&it.category.startsWith(prefix)) buckets.set(it.category,(buckets.get(it.category)||0)+Number(it.qty||0)); });
+    return Array.from(buckets.entries()).map(([k,v])=>({name:k,value:v})).filter(x=>x.value>0);
   }
 
   function renderSinglePie(main){
-    const entries = buildDataForMain(main);
-    const total = entries.reduce((s,e)=> s + e.value, 0) || 1;
-    const size = 240; const cx = size/2, cy = size/2, r = size*0.35;
-    const svg = el('svg',{width:size,height:size,viewBox:`0 0 ${size} ${size}`});
-    let acc = 0; const colors = ['#60a5fa','#34d399','#facc15','#fb7185','#a78bfa','#fb923c'];
-    function polar(a){ const rad=(a-90)*Math.PI/180; return {x: cx + r*Math.cos(rad), y: cy + r*Math.sin(rad)} }
-    function arc(start,end){ const s = polar(end); const e = polar(start); const large = (end-start)<=180 ? 0 : 1; return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 0 ${e.x} ${e.y} L ${cx} ${cy} Z`; }
-    if(entries.length === 0){ svg.appendChild(el('circle',{cx,cy,r,fill:'#f1f5f9'})); svg.appendChild(el('text',{x:cx,y:cy,'text-anchor':'middle','font-size':'12',fill:'#64748b'}, 'No data')); }
-    else {
-      const animPaths = [];
+    const entries=buildDataForMain(main);
+    const total=entries.reduce((s,e)=>s+e.value,0)||1;
+    const size=240; const cx=size/2,cy=size/2,r=size*0.35;
+    const svg=el('svg',{width:size,height:size,viewBox:`0 0 ${size} ${size}`});
+    let acc=0; const colors=['#60a5fa','#34d399','#facc15','#fb7185','#a78bfa','#fb923c'];
+    function polar(a){ const rad=(a-90)*Math.PI/180; return {x:cx+r*Math.cos(rad),y:cy+r*Math.sin(rad)}; }
+    function arc(start,end){ const s=polar(end),e=polar(start),large=(end-start)<=180?0:1; return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 0 ${e.x} ${e.y} L ${cx} ${cy} Z`; }
+
+    if(entries.length===0){
+      svg.appendChild(el('circle',{cx,cy,r,fill:'#f1f5f9'}));
+      svg.appendChild(el('text',{x:cx,y:cy,'text-anchor':'middle','font-size':'12',fill:'#64748b'},'No data'));
+    } else {
+      const animPaths=[];
       entries.forEach((en,i)=>{
-        const start = (acc/total)*360; acc += en.value; const end = (acc/total)*360; const d = arc(start,end);
-        const path = el('path',{d, fill: colors[i%colors.length], stroke:'#fff','stroke-width':1, style:'cursor:pointer'});
-        path.addEventListener('pointerenter', ()=>{ path.setAttribute('stroke','#111'); path.setAttribute('stroke-width','2'); });
-        path.addEventListener('pointerleave', ()=>{ path.setAttribute('stroke','#fff'); path.setAttribute('stroke-width','1'); });
-        path.addEventListener('click', ()=>{ currentPieFilter = (currentPieFilter === en.name) ? null : en.name; routeRender(); });
-        path.style.transformOrigin = `${cx}px ${cy}px`;
-        path.style.transform = 'scale(0.05)';
-        path.style.opacity = '0';
-        path.style.transition = 'transform 600ms cubic-bezier(.2,.8,.2,1), opacity 300ms ease';
+        const start=(acc/total)*360; acc+=en.value; const end=(acc/total)*360;
+        const path=el('path',{d:arc(start,end),fill:colors[i%colors.length],stroke:'#fff','stroke-width':2,style:'cursor:pointer'});
+        // Hover effects
+        path.addEventListener('pointerenter',()=>{ path.setAttribute('opacity','0.82'); path.setAttribute('stroke-width','3'); });
+        path.addEventListener('pointerleave',()=>{ path.setAttribute('opacity','1');    path.setAttribute('stroke-width','2'); });
+        path.addEventListener('click',()=>{ currentPieFilter=(currentPieFilter===en.name)?null:en.name; routeRender(); });
+        // Pop-in animation
+        path.style.transformOrigin=`${cx}px ${cy}px`;
+        path.style.transform='scale(0.05)';
+        path.style.opacity='0';
+        path.style.transition='transform 600ms cubic-bezier(.2,.8,.2,1), opacity 300ms ease';
         svg.appendChild(path);
-        animPaths.push({path, index:i});
+        animPaths.push({path,index:i});
       });
-      requestAnimationFrame(()=>{ animPaths.forEach((pObj, idx)=>{ setTimeout(()=>{ pObj.path.style.transform = 'scale(1)'; pObj.path.style.opacity = '1'; }, 120 + idx * 80); }); });
+      requestAnimationFrame(()=>{
+        animPaths.forEach((pObj,idx)=>{
+          setTimeout(()=>{ pObj.path.style.transform='scale(1)'; pObj.path.style.opacity='1'; },120+idx*80);
+        });
+      });
     }
-    svg.appendChild(el('circle',{cx,cy,r: r*0.5, fill:'#fff'}));
-    svg.appendChild(el('text',{x:cx,y:cy-6,'text-anchor':'middle','font-size':'12','font-weight':'600'}, main));
-    svg.appendChild(el('text',{x:cx,y:cy+12,'text-anchor':'middle','font-size':'10',fill:'#475569'}, `${entries.reduce((s,e)=>s+e.value,0)} qty`));
-	svg.classList.add('mx-auto');
-    const legend = el('div',{class:'flex flex-col gap-1'});
-    entries.forEach((en,i)=>{ const label = en.name === main ? main : en.name.replace(main + ' / ', ''); const pct = total ? (en.value/total*100) : 0; const row = el('div',{class:'flex items-center gap-1 whitespace-nowrap'}, [ el('button',{class:'w-3 h-3', style:`background:${colors[i%colors.length]};border-radius:4px`, onclick:()=>{ currentPieFilter = (currentPieFilter === en.name) ? null : en.name; routeRender(); }}, ''), el('div',{class:'text-sm'}, label), el('div',{class:'text-xs text-slate-500 ml-2'}, `${en.value}`) ]); legend.appendChild(row); });
-    const box = el('div',{class:'flex items-start gap-0'}, [ el('div',{class:'p-0 bg-white rounded shadow'}, svg), legend ]);
+    svg.appendChild(el('circle',{cx,cy,r:r*0.5,fill:'#fff'}));
+    svg.appendChild(el('text',{x:cx,y:cy-6,'text-anchor':'middle','font-size':'12','font-weight':'600'},main));
+    svg.appendChild(el('text',{x:cx,y:cy+12,'text-anchor':'middle','font-size':'10',fill:'#475569'},`${entries.reduce((s,e)=>s+e.value,0)} qty`));
+    svg.classList.add('mx-auto');
+
+    const legend=el('div',{class:'flex flex-col gap-1'});
+    entries.forEach((en,i)=>{
+      const label=en.name===main?main:en.name.replace(main+' / ','');
+      const row=el('div',{class:'flex items-center gap-1 whitespace-nowrap cursor-pointer rounded px-1 py-0.5 transition-colors hover:bg-slate-50'},[
+        el('div',{class:'w-3 h-3 rounded',style:`background:${colors[i%colors.length]}`},''),
+        el('div',{class:'text-sm'},label),
+        el('div',{class:'text-xs text-slate-500 ml-2'},`${en.value}`)
+      ]);
+      row.addEventListener('click',()=>{ currentPieFilter=(currentPieFilter===en.name)?null:en.name; routeRender(); });
+      legend.appendChild(row);
+    });
+    const box=el('div',{class:'flex items-start gap-0'},[el('div',{class:'p-0 bg-white rounded shadow'},svg),legend]);
     return box;
   }
 
-const piesContainer = el(
-  'div',
-  {
-    class:
-      'grid grid-cols-1 xl:grid-cols-2 gap-10 w-full'
-  },
-  [
-    el('div', { class: 'flex justify-start pl-6' }, renderSinglePie('A')),
-    el('div', { class: 'flex justify-start pl-6' }, renderSinglePie('B'))
-  ]
-);
-
-
-
-
-  const clearBtn = currentPieFilter ? el('div',{class:'flex items-start md:items-center'}, el('button',{class:'px-3 py-1 text-sm border rounded', onclick:()=>{ currentPieFilter = null; routeRender(); }}, 'Clear filter')) : null;
-  const wrapper = el('div',{class:'flex flex-col md:flex-row md:items-start md:justify-between gap-4'}, [ piesContainer, clearBtn ]);
-  return wrapper;
+  const piesContainer=el('div',{class:'grid grid-cols-1 xl:grid-cols-2 gap-10 w-full'},[
+    el('div',{class:'flex justify-start pl-6'},renderSinglePie('A')),
+    el('div',{class:'flex justify-start pl-6'},renderSinglePie('B'))
+  ]);
+  const clearBtn=currentPieFilter?el('div',{class:'flex items-start md:items-center'},el('button',{class:'px-3 py-1 text-sm border rounded-lg',onclick:()=>{ currentPieFilter=null; routeRender(); }},'Clear filter')):null;
+  return el('div',{class:'flex flex-col md:flex-row md:items-start md:justify-between gap-4'},[piesContainer,clearBtn]);
 }
 
-function renderItemsBar(){ const items = state.items.filter(i=> !currentPieFilter || i.category === currentPieFilter).slice().sort((a,b)=>b.qty-a.qty).slice(0,20); const max = Math.max(1, ...items.map(i=>Number(i.qty||0))); const cont = el('div',{class:'no-pop'});
-  if(currentPieFilter) cont.appendChild(el('div',{class:'text-sm text-slate-600 mb-2'}, `Showing items in category: ${currentPieFilter}`));
-  if(items.length===0) cont.appendChild(el('div',{class:'text-sm text-slate-500'}, '-- no items to display --'));
-  items.forEach(it=>{ const w = Math.round((it.qty/max)*160); cont.appendChild(el('div',{class:'flex items-center gap-3 mb-2'}, [ el('div',{class:'flex-1 text-sm'}, it.name), el('div',{class:'h-3 rounded', style:`width:${w}px;background:#bbf7d0`}), el('div',{}, String(it.qty)) ])); }); return cont; }
+/* ---- ITEMS BAR ---- */
+function renderItemsBar(){
+  const items=state.items.filter(i=>!currentPieFilter||i.category===currentPieFilter).slice().sort((a,b)=>b.qty-a.qty).slice(0,20);
+  const max=Math.max(1,...items.map(i=>Number(i.qty||0)));
+  const cont=el('div',{class:'no-pop'});
+  if(currentPieFilter) cont.appendChild(el('div',{class:'text-sm text-slate-600 mb-2'},`Showing items in category: ${currentPieFilter}`));
+  if(items.length===0) cont.appendChild(el('div',{class:'text-sm text-slate-500'},'-- no items to display --'));
+  items.forEach((it,idx)=>{
+    const pct=Math.round((it.qty/max)*160);
+    const barWrap=el('div',{class:'flex items-center gap-3 mb-2 anim-row-in'},[
+      el('div',{class:'flex-1 text-sm'},it.name),
+      el('div',{class:'h-2 rounded-full bg-green-200 qty-bar',style:`width:${pct}px; background:#86efac; --w:${pct}px`}),
+      el('div',{},String(it.qty))
+    ]);
+    cont.appendChild(barWrap);
+  });
+  return cont;
+}
 
-// Quick Entry (category-specific)
+/* ---- QUICK ENTRY ---- */
 function renderQuickForCategory(catName){
-  const container = el('div',{});
-  let selSub = catName; let selItem = ''; let amt = 1; let note = '';let entryDate = '';
-  function getSubcategories(){ const prefix = catName + ' / '; const subs = (state.categories||[]).filter(c=> c === catName || c.startsWith(prefix)); const ordered = [catName, ...subs.filter(s=> s !== catName)]; return Array.from(new Set(ordered)); }
-  function updateItemsForSub(){ const itemSelect = container.querySelector('select.item-select'); if (!itemSelect) return; itemSelect.innerHTML = ''; if (selSub === catName) { itemSelect.appendChild(el('option', { value: '' }, '-- (select subcategory)')); selItem = ''; return; } const list = state.items
-  .filter(i => i.category === selSub)
-  .slice()
-  .sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-  ); if (list.length === 0) { itemSelect.appendChild(el('option', { value: '' }, '-- no items --')); selItem = ''; return; } list.forEach(i => itemSelect.appendChild(el('option',{ value: i.id }, `${i.name} — ${i.qty} ${i.unit} (${i.location || '-'})`))); selItem = ''; itemSelect.value = ''; }
-  function updateSubSelect(){ const subSelect = container.querySelector('select.sub-select'); if(!subSelect) return; subSelect.innerHTML = ''; const subs = getSubcategories(); subs.forEach(s=> subSelect.appendChild(el('option',{value:s}, s === catName ? `${s} (main)` : s.replace(catName + ' / ', '')))); const has = subs.includes(selSub); if(!has) selSub = subs[0] || catName; subSelect.value = selSub; updateItemsForSub(); }
-  const form = el('form',{onsubmit:(e)=>{ e.preventDefault(); const it = state.items.find(x=> x.id === selItem); if(!it) return alert('Select item'); const modal = el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'}, el('div',{class:'bg-white p-4 rounded w-96'}, [ el('h3',{class:'font-semibold mb-2'}, 'Confirm consumption'), el('div',{}, `Item: ${it.name}`), el('div',{}, `Amount: ${amt}`), el('div',{}, `Note: ${note||'—'}`), el('div',{class:'flex justify-end gap-2 mt-3'}, [ el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Cancel'), el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded', onclick:()=>{ recordConsumption(it.id, amt, note , entryDate);
-modal.remove();
-document.dispatchEvent(new CustomEvent('statechange')); }}, 'Confirm') ]) ])); showAnimatedModal(modal); } , class:'space-y-2'}, []);
-  const subSelect = el('select',{class:'p-2 border rounded sub-select', onchange:e=>{ selSub = e.target.value; updateItemsForSub(); } });
-  const itemSelect = el('select',{class:'p-2 border rounded item-select', onchange:e=> selItem = e.target.value });
-  form.appendChild(el('div',{class:'flex gap-2'}, [ subSelect, itemSelect ]));
- form.appendChild(
-  el('div',{class:'flex gap-2 items-center'}, [
-    el('input',{
-      type:'number',
-      min:1,
-      value:1,
-      class:'w-24 p-2 border rounded',
-      onchange:e=> amt = Number(e.target.value)
-    }),
-    el('input',{
-      type:'date',
-      class:'p-2 border rounded',
-      onchange:e=> entryDate = e.target.value
-    }),
-    el('input',{
-      placeholder:'note',
-      class:'flex-1 p-2 border rounded',
-      onchange:e=> note = e.target.value
-    }),
-    el('button',{
-      class:'px-3 py-2 bg-sky-600 text-white rounded'
-    }, 'Record')
-  ])
-);
+  const container=el('div',{});
+  let selSub=catName,selItem='',amt=1,note='',entryDate='';
+  function getSubcategories(){ const prefix=catName+' /'; const subs=(state.categories||[]).filter(c=>c===catName||c.startsWith(prefix)); return Array.from(new Set([catName,...subs.filter(s=>s!==catName)])); }
+  function updateItemsForSub(){
+    const itemSelect=container.querySelector('select.item-select'); if(!itemSelect) return;
+    itemSelect.innerHTML='';
+    if(selSub===catName){ itemSelect.appendChild(el('option',{value:''},'-- (select subcategory)')); selItem=''; return; }
+    const list=state.items.filter(i=>i.category===selSub).slice().sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base'}));
+    if(list.length===0){ itemSelect.appendChild(el('option',{value:''},'-- no items --')); selItem=''; return; }
+    list.forEach(i=>itemSelect.appendChild(el('option',{value:i.id},`${i.name} — ${i.qty} ${i.unit} (${i.location||'-'})`)));
+    selItem=''; itemSelect.value='';
+  }
+  function updateSubSelect(){
+    const subSelect=container.querySelector('select.sub-select'); if(!subSelect) return;
+    subSelect.innerHTML='';
+    const subs=getSubcategories();
+    subs.forEach(s=>subSelect.appendChild(el('option',{value:s},s===catName?`${s} (main)`:s.replace(catName+' / ',''))));
+    if(!subs.includes(selSub)) selSub=subs[0]||catName;
+    subSelect.value=selSub; updateItemsForSub();
+  }
+  const form=el('form',{onsubmit:(e)=>{
+    e.preventDefault();
+    const it=state.items.find(x=>x.id===selItem); if(!it) return alert('Select item');
+    const modal=el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'},
+      el('div',{class:'bg-white p-4 rounded-xl w-96'},[
+        el('h3',{class:'font-semibold mb-2'},'Confirm consumption'),
+        el('div',{},`Item: ${it.name}`), el('div',{},`Amount: ${amt}`), el('div',{},`Note: ${note||'—'}`),
+        el('div',{class:'flex justify-end gap-2 mt-3'},[
+          el('button',{class:'px-3 py-1 border rounded-lg',onclick:()=>modal.remove()},'Cancel'),
+          el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded-lg btn-record',onclick:()=>{ recordConsumption(it.id,amt,note,entryDate); modal.remove(); document.dispatchEvent(new CustomEvent('statechange')); }},'Confirm')
+        ])
+      ])
+    );
+    showAnimatedModal(modal);
+  },class:'space-y-2'},[]);
 
+  const subSelect=el('select',{class:'p-2 border rounded-lg sub-select',onchange:e=>{ selSub=e.target.value; updateItemsForSub(); }});
+  const itemSelect=el('select',{class:'p-2 border rounded-lg item-select',onchange:e=>selItem=e.target.value});
+  form.appendChild(el('div',{class:'flex gap-2'},[subSelect,itemSelect]));
+  form.appendChild(el('div',{class:'flex gap-2 items-center'},[
+    el('input',{type:'number',min:1,value:1,class:'w-24 p-2 border rounded-lg',onchange:e=>amt=Number(e.target.value)}),
+    el('input',{type:'date',class:'p-2 border rounded-lg',onchange:e=>entryDate=e.target.value}),
+    el('input',{placeholder:'note',class:'flex-1 p-2 border rounded-lg',onchange:e=>note=e.target.value}),
+    el('button',{class:'px-3 py-2 bg-sky-600 text-white rounded-lg btn-record'},'Record')
+  ]));
   container.appendChild(form);
   function _stateListener(){ updateSubSelect(); updateItemsForSub(); }
-  document.addEventListener('statechange', _stateListener);
-  const observer = new MutationObserver(() => { if(!document.body.contains(container)){ document.removeEventListener('statechange', _stateListener); observer.disconnect(); } });
-  observer.observe(document.body, { childList: true, subtree: true });
+  document.addEventListener('statechange',_stateListener);
+  const observer=new MutationObserver(()=>{ if(!document.body.contains(container)){ document.removeEventListener('statechange',_stateListener); observer.disconnect(); } });
+  observer.observe(document.body,{childList:true,subtree:true});
   updateSubSelect();
   return container;
 }
 
-function showConfirm(it,amt,note){ const modal = el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'}, el('div',{class:'bg-white p-4 rounded w-96'}, [ el('h3',{class:'font-semibold mb-2'}, 'Confirm consumption'), el('div',{}, `Item: ${it.name}`), el('div',{}, `Amount: ${amt}`), el('div',{}, `Note: ${note||'—'}`), el('div',{class:'flex justify-end gap-2 mt-3'}, [ el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Cancel'), el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded', onclick:()=>{ recordConsumption(it.id, amt, note, entryDate); modal.remove(); document.dispatchEvent(new CustomEvent('statechange')); }}, 'Confirm') ]) ])); showAnimatedModal(modal); }
-
-/* Recent activity renderer accepts optional limit (null => all) */
+/* ---- RECENT ACTIVITY ---- */
 function renderRecentActivity(limit=null){
-  const entries = state.items.flatMap(i=>(i.history||[]).map(h=>({...h,itemName:i.name,itemId:i.id,receivedFrom: h.receivedFrom || i.receivedFrom || ''}))).sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const cont = el('div',{});
-  if(entries.length===0) { cont.appendChild(el('div',{class:'text-sm text-slate-500'}, 'No recent activity')); return cont; }
-  const list = (typeof limit === 'number') ? entries.slice(0, limit) : entries;
-  list.forEach(e=>{
-    const row = el('div',{class:'border p-2 rounded flex items-center justify-between mb-2'}, [
-      el('div',{}, [ el('div',{class:'font-medium'}, e.itemName), el('div',{class:'text-xs text-slate-500'}, new Date(e.date + 'T00:00:00').toLocaleDateString()),el(
-  'div',
-  {
-    class:
-      'font-medium ' +
-      (e.note === 'Stock added'
-        ? 'text-green-600'
-        : 'text-red-600')
-  },
-  (e.note === 'Stock added'
-    ? `+${e.amount}`
-    : `-${e.amount}`
-  ) +
-    ' — ' +
-    e.note +
-    (e.note === 'Stock added' && e.receivedFrom
-      ? ` (From: ${e.receivedFrom})`
-      : '')
-)
- ]),
-      (function(){ let confirming=false; const wrapper=el('div',{}); const btn = el('button',{class:'px-2 py-1 border rounded text-sm', onclick:()=>{ if(!confirming){ confirming=true; wrapper.innerHTML=''; wrapper.appendChild(el('div',{class:'flex gap-2'}, [ el('button',{class:'px-2 py-1 bg-red-600 text-white rounded text-sm', onclick:()=>{ deleteActivity(e.itemId,e.id);
-document.dispatchEvent(new CustomEvent('statechange')); }}, 'Confirm'), el('button',{class:'px-2 py-1 border rounded text-sm', onclick:()=>{ confirming=false; document.dispatchEvent(new CustomEvent('statechange')); }}, 'Cancel') ])); } }}, 'Edit'); wrapper.appendChild(btn); return wrapper; })()
+  const entries=state.items.flatMap(i=>(i.history||[]).map(h=>({...h,itemName:i.name,itemId:i.id,receivedFrom:h.receivedFrom||i.receivedFrom||''})))
+    .sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const cont=el('div',{});
+  if(entries.length===0){ cont.appendChild(el('div',{class:'text-sm text-slate-500'},'No recent activity')); return cont; }
+  const list=(typeof limit==='number')?entries.slice(0,limit):entries;
+  list.forEach((e,idx)=>{
+    const isAdded=e.note==='Stock added';
+    const row=el('div',{class:`border p-2 rounded-lg flex items-center justify-between mb-2 anim-row-in ${isAdded?'activity-added':'activity-consumed'}`},[
+      el('div',{},[
+        el('div',{class:'font-medium'},e.itemName),
+        el('div',{class:'text-xs text-slate-500'},new Date(e.date+'T00:00:00').toLocaleDateString()),
+        el('div',{class:'font-medium '+(isAdded?'text-green-600':'text-red-600')},
+          (isAdded?`+${e.amount}`:`-${e.amount}`)+' — '+e.note+(isAdded&&e.receivedFrom?` (From: ${e.receivedFrom})`:''))
+      ]),
+      (function(){
+        let confirming=false; const wrapper=el('div',{});
+        const btn=el('button',{class:'px-2 py-1 border rounded-lg text-sm',onclick:()=>{
+          if(!confirming){
+            confirming=true; wrapper.innerHTML='';
+            wrapper.appendChild(el('div',{class:'flex gap-2'},[
+              el('button',{class:'px-2 py-1 bg-red-600 text-white rounded-lg text-sm',onclick:()=>{ deleteActivity(e.itemId,e.id); document.dispatchEvent(new CustomEvent('statechange')); }},'Confirm'),
+              el('button',{class:'px-2 py-1 border rounded-lg text-sm',onclick:()=>{ confirming=false; document.dispatchEvent(new CustomEvent('statechange')); }},'Cancel')
+            ]));
+          }
+        }},'Edit');
+        wrapper.appendChild(btn); return wrapper;
+      })()
     ]);
     cont.appendChild(row);
   });
   return cont;
 }
 
-/* Activities page (paginated) */
-function renderAllActivities(page=1, perPage=20){
+/* ---- ALL ACTIVITIES (paginated) ---- */
+function renderAllActivities(page=1,perPage=20){
   clear(app);
-  const all = state.items.flatMap(i=>(i.history||[]).map(h=>({...h,itemName:i.name,itemId:i.id,receivedFrom: h.receivedFrom || i.receivedFrom || ''}))).sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const total = all.length;
-  const totalPages = Math.max(1, Math.ceil(total / perPage));
-  if(page < 1) page = 1;
-  if(page > totalPages) page = totalPages;
-  const start = (page-1)*perPage;
-  const pageItems = all.slice(start, start + perPage);
-
-  const container = el('div',{});
-  container.appendChild(el('div',{class:'flex items-center justify-between'}, [ el('h2',{class:'text-xl font-semibold'}, `Activities — Page ${page} of ${totalPages}`), el('div',{}, [ el('a',{href:'#/', class:'text-sky-600 text-sm'}, '← Home') ]) ]));
-
-  const listWrapper = el('div',{class:'bg-white p-4 rounded shadow mt-4'});
-  if(pageItems.length === 0) listWrapper.appendChild(el('div',{class:'text-sm text-slate-500'}, '-- no activity --'));
-  else pageItems.forEach(e=>{
-    const row = el('div',{class:'border p-2 rounded flex items-center justify-between mb-2'}, [
-      el('div',{}, [ el('div',{class:'font-medium'}, e.itemName), el('div',{class:'text-xs text-slate-500'}, new Date(e.date + 'T00:00:00').toLocaleDateString()),el(
-  'div',
-  {
-    class:
-      'font-medium ' +
-      (e.note === 'Stock added'
-        ? 'text-green-600'
-        : 'text-red-600')
-  },
-  (e.note === 'Stock added'
-    ? `+${e.amount}`
-    : `-${e.amount}`
-  ) +
-    ' — ' +
-    e.note +
-    (e.note === 'Stock added' && e.receivedFrom
-      ? ` (From: ${e.receivedFrom})`
-      : '')
-)
- ]),
-      (function(){ let confirming=false; const wrapper=el('div',{}); const btn = el('button',{class:'px-2 py-1 border rounded text-sm', onclick:()=>{ if(!confirming){ confirming=true; wrapper.innerHTML=''; wrapper.appendChild(el('div',{class:'flex gap-2'}, [ el('button',{class:'px-2 py-1 bg-red-600 text-white rounded text-sm', onclick:()=>{ deleteActivity(e.itemId,e.id); document.dispatchEvent(new CustomEvent('statechange')); }}, 'Confirm'), el('button',{class:'px-2 py-1 border rounded text-sm', onclick:()=>{ confirming=false;
-document.dispatchEvent(new CustomEvent('statechange')); }}, 'Cancel') ])); } }}, 'Edit'); wrapper.appendChild(btn); return wrapper; })()
+  const all=state.items.flatMap(i=>(i.history||[]).map(h=>({...h,itemName:i.name,itemId:i.id,receivedFrom:h.receivedFrom||i.receivedFrom||''})))
+    .sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const total=all.length,totalPages=Math.max(1,Math.ceil(total/perPage));
+  if(page<1) page=1; if(page>totalPages) page=totalPages;
+  const start=(page-1)*perPage, pageItems=all.slice(start,start+perPage);
+  const container=el('div',{});
+  container.appendChild(el('div',{class:'flex items-center justify-between'},[
+    el('h2',{class:'text-xl font-semibold'},`Activities — Page ${page} of ${totalPages}`),
+    el('div',{},[el('a',{href:'#/',class:'text-sky-600 text-sm'},'← Home')])
+  ]));
+  const listWrapper=el('div',{class:'bg-white p-4 rounded-xl shadow mt-4'});
+  if(pageItems.length===0) listWrapper.appendChild(el('div',{class:'text-sm text-slate-500'},'-- no activity --'));
+  else pageItems.forEach((e,idx)=>{
+    const isAdded=e.note==='Stock added';
+    const row=el('div',{class:`border p-2 rounded-lg flex items-center justify-between mb-2 anim-row-in ${isAdded?'activity-added':'activity-consumed'}`},[
+      el('div',{},[
+        el('div',{class:'font-medium'},e.itemName),
+        el('div',{class:'text-xs text-slate-500'},new Date(e.date+'T00:00:00').toLocaleDateString()),
+        el('div',{class:'font-medium '+(isAdded?'text-green-600':'text-red-600')},
+          (isAdded?`+${e.amount}`:`-${e.amount}`)+' — '+e.note+(isAdded&&e.receivedFrom?` (From: ${e.receivedFrom})`:''))
+      ]),
+      (function(){
+        let confirming=false; const wrapper=el('div',{});
+        const btn=el('button',{class:'px-2 py-1 border rounded-lg text-sm',onclick:()=>{
+          if(!confirming){
+            confirming=true; wrapper.innerHTML='';
+            wrapper.appendChild(el('div',{class:'flex gap-2'},[
+              el('button',{class:'px-2 py-1 bg-red-600 text-white rounded-lg text-sm',onclick:()=>{ deleteActivity(e.itemId,e.id); document.dispatchEvent(new CustomEvent('statechange')); }},'Confirm'),
+              el('button',{class:'px-2 py-1 border rounded-lg text-sm',onclick:()=>{ confirming=false; document.dispatchEvent(new CustomEvent('statechange')); }},'Cancel')
+            ]));
+          }
+        }},'Edit');
+        wrapper.appendChild(btn); return wrapper;
+      })()
     ]);
     listWrapper.appendChild(row);
   });
-
-  // paging controls
-  const paging = el('div',{class:'flex items-center justify-between mt-4'}, [
-    el('div',{}, [
-      el('button',{class:'px-3 py-1 border rounded mr-2', onclick:()=>{ location.hash = '#/activities?page=' + Math.max(1, page-1); }}, 'Prev'),
-      el('button',{class:'px-3 py-1 border rounded', onclick:()=>{ location.hash = '#/activities?page=' + Math.min(totalPages, page+1); }}, 'Next')
+  const paging=el('div',{class:'flex items-center justify-between mt-4'},[
+    el('div',{},[
+      el('button',{class:'px-3 py-1 border rounded-lg mr-2',onclick:()=>{ location.hash='#/activities?page='+Math.max(1,page-1); }},'Prev'),
+      el('button',{class:'px-3 py-1 border rounded-lg',onclick:()=>{ location.hash='#/activities?page='+Math.min(totalPages,page+1); }},'Next')
     ]),
-    el('div',{}, [
-      el('span',{class:'text-sm text-slate-500 mr-3'}, `${total} total entries`),
-      el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded text-sm', onclick:()=>{ // export current page as CSV
-        const rows = pageItems.map(r=>({date:r.date, item:r.itemName, amount:r.amount, note:r.note}));
-        const csv = Papa.unparse(rows);
-        const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `activities_page_${page}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-      }}, 'Export page CSV')
+    el('div',{},[
+      el('span',{class:'text-sm text-slate-500 mr-3'},`${total} total entries`),
+      el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded-lg text-sm',onclick:()=>{
+        const rows=pageItems.map(r=>({date:r.date,item:r.itemName,amount:r.amount,note:r.note}));
+        const csv=Papa.unparse(rows);
+        const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
+        const a=document.createElement('a'); a.href=url; a.download=`activities_page_${page}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      }},'Export page CSV')
     ])
   ]);
-
-  container.appendChild(listWrapper);
-  container.appendChild(paging);
-  app.appendChild(container);
-  renderUndo();
+  container.appendChild(listWrapper); container.appendChild(paging); app.appendChild(container); renderUndo();
 }
 
-/* Category / item pages (unchanged) */
+/* ---- CATEGORY ---- */
 function renderCategory(name){
   clear(app);
-  const decoded = name||'';
-  const items = state.items
-  .filter(i => i.category === decoded)
-  .slice() // avoid mutating state
-  .sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-  );
-  const cont = el('div',{});
-  cont.appendChild(el('div',{class:'flex items-center justify-between'}, [ el('h2',{class:'text-xl font-semibold'}, `Category: ${decoded}`), el('a',{href:'#/categories', class:'text-sky-600'}, 'Back') ]));
-  const grid = el('div',{class:'grid md:grid-cols-2 gap-4 mt-4'});
-  const left = el('div',{class:'bg-white p-4 rounded shadow no-pop'}, [ el('h3',{class:'font-medium mb-2'}, 'Items'), (function(){
-    const tbl = el('table',{class:'w-full text-sm'});
-    const thead = el('thead',{}, el('tr',{}, [ el('th',{class:'p-2 text-left'}, 'Name'), el('th',{class:'p-2'}, 'Location'),
- el('th',{class:'p-2'}, 'Qty'), el('th',{class:'p-2'}, 'Unit'), el('th',{class:'p-2'}, 'Actions') ]));
-    const tbody = el('tbody',{});
-
-    items.forEach(it=>{
-      const actions = el('div',{class:'flex items-center justify-center gap-2'});
-      const histBtn = el('button',{class:'px-2 py-1 border rounded text-sm', onclick:()=> openHistory(it.id)}, 'History');
-      const editBtn = el('button',{class:'px-2 py-1 border rounded text-sm', onclick:()=> openEditItem(it)}, 'Edit');
-      actions.appendChild(histBtn);
-      actions.appendChild(editBtn);
-
-      const tr = el('tr',{class:'border-b'}, [
-        el('td',{class:'py-2'}, it.name),
-        el('td',{class:'py-2 text-center'}, it.location || ''),
-        el('td',{class:'py-2 text-center'}, String(it.qty)),
-        el('td',{class:'py-2 text-center'}, it.unit),
-        el('td',{class:'py-2 text-center'}, actions)
-      ]);
-      tbody.appendChild(tr);
-    });
-
-    tbl.appendChild(thead);
-    tbl.appendChild(tbody);
-    return tbl;
-  })() ]);
-
-  // right: add/update form (keeps existing functionality)
-  const right = el('div',{class:'bg-white p-4 rounded shadow no-pop'}, [ el('h3',{class:'font-medium mb-2'}, 'Add / Update'), (function(){
-    const form = el('form',{
-  onsubmit:(e)=>{
-    e.preventDefault();
-
-    if(mode.value === 'new'){
-      if(!newName.value) return alert('Enter name');
-
-      const initialQty = 0;
-
-      addItem({
-        id: uid(),
-        name: newName.value.trim(),
-        category: decoded,
-        qty: initialQty,
-        unit: newUnit.value,
-        location: newLocation.value || '',
-        receivedFrom: newReceivedFrom.value || '',
-        history: initialQty > 0
-          ? [{
-              id: uid(),
-              date: addDate.value,
-              amount: initialQty,
-              note: 'Stock added',
-			  receivedFrom: newReceivedFrom.value.trim() || ''
-            }]
-          : []
+  const decoded=name||'';
+  const items=state.items.filter(i=>i.category===decoded).slice().sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base'}));
+  const cont=el('div',{});
+  cont.appendChild(el('div',{class:'flex items-center justify-between'},[
+    el('h2',{class:'text-xl font-semibold'},`Category: ${decoded}`),
+    el('a',{href:'#/categories',class:'text-sky-600'},'Back')
+  ]));
+  const grid=el('div',{class:'grid md:grid-cols-2 gap-4 mt-4'});
+  const left=el('div',{class:'bg-white p-4 rounded-xl shadow no-pop'},[
+    el('h3',{class:'font-medium mb-2'},'Items'),
+    (function(){
+      const tbl=el('table',{class:'w-full text-sm'});
+      tbl.appendChild(el('thead',{},el('tr',{},[
+        el('th',{class:'p-2 text-left'},'Name'), el('th',{class:'p-2'},'Location'),
+        el('th',{class:'p-2'},'Qty'), el('th',{class:'p-2'},'Unit'), el('th',{class:'p-2'},'Actions')
+      ])));
+      const tbody=el('tbody',{});
+      items.forEach(it=>{
+        const actions=el('div',{class:'flex items-center justify-center gap-2'});
+        actions.appendChild(el('button',{class:'px-2 py-1 border rounded-lg text-sm',onclick:()=>openHistory(it.id)},'History'));
+        actions.appendChild(el('button',{class:'px-2 py-1 border rounded-lg text-sm',onclick:()=>openEditItem(it)},'Edit'));
+        tbody.appendChild(el('tr',{class:'border-b anim-row-in'},[
+          el('td',{class:'py-2'},it.name), el('td',{class:'py-2 text-center'},it.location||''),
+          el('td',{class:'py-2 text-center'},String(it.qty)), el('td',{class:'py-2 text-center'},it.unit),
+          el('td',{class:'py-2 text-center'},actions)
+        ]));
       });
+      tbl.appendChild(tbody); return tbl;
+    })()
+  ]);
 
-      newName.value = '';
-      newQty.value = 0;
-      newUnit.value = 'Meter';
-      if(newLocation) newLocation.value = '';
-      newReceivedFrom.value = '';
-
-      document.dispatchEvent(new CustomEvent('statechange'));
-
-    } else {
-      if(!selectedId.value) return alert('Select item');
-	  if (!addDate.value) { alert('Please select a date'); return;}
-      showAddConfirm();
-    }
-  },
-  class: 'space-y-2'
-}, []);
-
-
-
-    const mode = el('select',{class:'p-2 border rounded', onchange:()=> renderFields()}, [ el('option',{value:'new'}, 'Create new item'), el('option',{value:'existing'}, 'Add to existing') ]);
-    const newName=el('input',{placeholder:'Item name', class:'w-full p-2 border rounded'});
-    const newQty=el('input',{type:'number', class:'w-28 p-2 border rounded'});
-    const newUnit = el('select',{class:'w-28 p-2 border rounded'}, [ el('option',{value:'Meter'}, 'Meter'), el('option',{value:'NO'}, 'NO') ]);
-    const newLocation = el('input',{class:'w-36 p-2 border rounded', placeholder:'Storage location (e.g., Rack 1)'});
-	const newReceivedFrom = el('input',{
-  class:'w-full p-2 border rounded mt-2',
-  placeholder:'Received from (Vendor / Department)'
-});
-    const selectedId=el('select',{class:'w-full p-2 border rounded mt-2'}, [ el('option',{value:''}, '-- select --') ]);
-    items.forEach(it=> selectedId.appendChild(el('option',{value:it.id}, `${it.name} — ${it.qty}`)));
-    const addQty=el('input',{type:'number', value:1, class:'w-28 p-2 border rounded'});
-	const addDate = el('input', { type: 'date', class: 'p-2 border rounded', required: true});
-
-    const btn=el('button',{class:'px-3 py-2 bg-sky-600 text-white rounded mt-2'}, 'Create');
-
-    form.appendChild(el('div',{}, [ el('label',{}, 'Mode: '), mode ]));
-    form.appendChild(el('div',{id:'fields', class:'mt-2'}));
-    form.appendChild(btn);
-
-    function renderFields() {
-  const f = form.querySelector('#fields');
-  f.innerHTML = '';
-
-  if (mode.value === 'new') {
-    f.appendChild(newName);
-
-    f.appendChild(
-      el('div', { class: 'flex gap-2 mt-2' }, [
-        newUnit,
-        newLocation
-      ])
-    );
-
-    
-    btn.textContent = 'Create';
-
-  } else {
-    f.appendChild(selectedId);
-
-    f.appendChild(
-      el('div', { class: 'flex gap-2 mt-2 items-center' }, [
-        addQty,
-		addDate,
-        el('div', { class: 'text-sm text-slate-500' }, 'Add quantity')
-      ])
-    );
-f.appendChild(newReceivedFrom);
-    btn.textContent = 'Add quantity';
-  }
-}
-
-    renderFields();
-
-    function showAddConfirm(){ const it = state.items.find(x=>x.id===selectedId.value); if(!it) return; const modal = el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'}, el('div',{class:'bg-white p-4 rounded w-96'}, [ el('h3',{class:'font-semibold mb-2'}, 'Confirm add stock'), el('div',{}, `Add ${addQty.value} units to ${it.name}`), el('div',{class:'flex justify-end gap-2 mt-3'}, [ el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Cancel'), el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded', onclick:()=>{ updateItem(it.id,{ qty: Number(it.qty||0) + Number(addQty.value||0),receivedFrom: newReceivedFrom.value.trim(), history:[ {id:uid(),date: addDate.value,amount:Number(addQty.value||0),note:'Stock added',receivedFrom: newReceivedFrom.value.trim() || ''} , ...(it.history||[])] }); modal.remove();
-document.dispatchEvent(new CustomEvent('statechange')); }}, 'Confirm') ]) ])); showAnimatedModal(modal); }
-
-    return form; })() ]);
+  const right=el('div',{class:'bg-white p-4 rounded-xl shadow no-pop'},[
+    el('h3',{class:'font-medium mb-2'},'Add / Update'),
+    (function(){
+      const form=el('form',{
+        onsubmit:(e)=>{
+          e.preventDefault();
+          if(mode.value==='new'){
+            if(!newName.value) return alert('Enter name');
+            addItem({id:uid(),name:newName.value.trim(),category:decoded,qty:0,unit:newUnit.value,location:newLocation.value||'',receivedFrom:newReceivedFrom.value||'',history:[]});
+            newName.value=''; newQty.value=0; newUnit.value='Meter'; if(newLocation) newLocation.value=''; newReceivedFrom.value='';
+            document.dispatchEvent(new CustomEvent('statechange'));
+          } else {
+            if(!selectedId.value) return alert('Select item');
+            if(!addDate.value){ alert('Please select a date'); return; }
+            showAddConfirm();
+          }
+        },class:'space-y-2'
+      },[]);
+      const mode=el('select',{class:'p-2 border rounded-lg',onchange:()=>renderFields()},[
+        el('option',{value:'new'},'Create new item'), el('option',{value:'existing'},'Add to existing')
+      ]);
+      const newName=el('input',{placeholder:'Item name',class:'w-full p-2 border rounded-lg'});
+      const newQty=el('input',{type:'number',class:'w-28 p-2 border rounded-lg'});
+      const newUnit=el('select',{class:'w-28 p-2 border rounded-lg'},[el('option',{value:'Meter'},'Meter'),el('option',{value:'NO'},'NO')]);
+      const newLocation=el('input',{class:'w-36 p-2 border rounded-lg',placeholder:'Storage location'});
+      const newReceivedFrom=el('input',{class:'w-full p-2 border rounded-lg mt-2',placeholder:'Received from (Vendor / Department)'});
+      const selectedId=el('select',{class:'w-full p-2 border rounded-lg mt-2',onchange:e=>selItem=e.target.value},[el('option',{value:''},'-- select --')]);
+      items.forEach(it=>selectedId.appendChild(el('option',{value:it.id},`${it.name} — ${it.qty}`)));
+      const addQty=el('input',{type:'number',value:1,class:'w-28 p-2 border rounded-lg'});
+      const addDate=el('input',{type:'date',class:'p-2 border rounded-lg',required:true});
+      const btn=el('button',{class:'px-3 py-2 bg-sky-600 text-white rounded-lg mt-2 btn-record'},'Create');
+      form.appendChild(el('div',{},[el('label',{},'Mode: '),mode]));
+      form.appendChild(el('div',{id:'fields',class:'mt-2'}));
+      form.appendChild(btn);
+      function renderFields(){
+        const f=form.querySelector('#fields'); f.innerHTML='';
+        if(mode.value==='new'){
+          f.appendChild(newName);
+          f.appendChild(el('div',{class:'flex gap-2 mt-2'},[newUnit,newLocation]));
+          btn.textContent='Create';
+        } else {
+          f.appendChild(selectedId);
+          f.appendChild(el('div',{class:'flex gap-2 mt-2 items-center'},[addQty,addDate,el('div',{class:'text-sm text-slate-500'},'Add quantity')]));
+          f.appendChild(newReceivedFrom);
+          btn.textContent='Add quantity';
+        }
+      }
+      renderFields();
+      function showAddConfirm(){
+        const it=state.items.find(x=>x.id===selectedId.value); if(!it) return;
+        const modal=el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'},
+          el('div',{class:'bg-white p-4 rounded-xl w-96'},[
+            el('h3',{class:'font-semibold mb-2'},'Confirm add stock'),
+            el('div',{},`Add ${addQty.value} units to ${it.name}`),
+            el('div',{class:'flex justify-end gap-2 mt-3'},[
+              el('button',{class:'px-3 py-1 border rounded-lg',onclick:()=>modal.remove()},'Cancel'),
+              el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded-lg',onclick:()=>{
+                updateItem(it.id,{qty:Number(it.qty||0)+Number(addQty.value||0),receivedFrom:newReceivedFrom.value.trim(),
+                  history:[{id:uid(),date:addDate.value,amount:Number(addQty.value||0),note:'Stock added',receivedFrom:newReceivedFrom.value.trim()||''},...(it.history||[])]});
+                modal.remove(); document.dispatchEvent(new CustomEvent('statechange'));
+              }},'Confirm')
+            ])
+          ])
+        );
+        showAnimatedModal(modal);
+      }
+      return form;
+    })()
+  ]);
 
   grid.appendChild(left); grid.appendChild(right); cont.appendChild(grid); app.appendChild(cont); renderUndo();
 
-  // history modal
-  function openHistory(id){ const it = state.items.find(x=>x.id===id); if(!it) return; let histFrom='', histTo=''; const modal = el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'}, el('div',{class:'bg-white p-4 rounded w-96 max-h-[70vh] overflow-auto'}, [ el('button',{class:'absolute right-2 top-2 text-slate-500 hover:text-black', onclick:()=> modal.remove()}, '✕'), el('h3',{class:'font-semibold mb-2 mt-6'}, `History for ${it.name}`), el('div',{class:'text-sm font-medium mb-3 text-slate-700'}, `Total Qty Available: ${it.qty}`), el('div',{class:'flex gap-2 items-center mb-3'}, [ el('div',{class:'flex items-center gap-1'}, [ el('label',{class:'text-xs'}, 'From'), el('input',{type:'date', class:'p-1 border rounded text-xs ml-1', onchange:e=> histFrom=e.target.value }) ]), el('div',{class:'flex items-center gap-1'}, [ el('label',{class:'text-xs'}, 'To'), el('input',{type:'date', class:'p-1 border rounded text-xs ml-1', onchange:e=> histTo=e.target.value }) ]), el('button',{class:'ml-auto px-2 py-1 bg-sky-600 text-white text-xs rounded', onclick:()=>{ const rows = (it.history||[]).slice().sort((a,b)=>new Date(a.date)-new Date(b.date)).map(h=>({date: h.date, amount:(h.note==='Stock added'? ('+'+h.amount):('-'+h.amount)), note:h.note,receivedFrom: h.receivedFrom || ''})); const csv = Papa.unparse(rows); const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=it.name.replaceAll(' ','_') + '_history.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); } }, 'Export CSV') ]), el('div',{class:'space-y-2 text-sm text-slate-700'}, (it.history||[]).slice().sort((a,b)=>new Date(b.date + 'T00:00:00') - new Date(a.date + 'T00:00:00')).filter(h=>{ if (histFrom && new Date(h.date + 'T00:00:00') < new Date(histFrom + 'T00:00:00')) return false; if(histTo){ const dayEnd=new Date(histTo); dayEnd.setDate(dayEnd.getDate()+1); if (new Date(h.date + 'T00:00:00') >= dayEnd) return false; } return true; }).map(h=> el('div',{class:'border-b py-2 ' + (h.note==='Stock added' ? 'bg-green-50' : 'bg-red-50')}, [ el('div',{class:'text-xs text-slate-500'}, new Date(h.date + 'T00:00:00').toLocaleDateString()
-), el('div',{class:'font-medium'}, (h.note==='Stock added' ? 'Added' : 'Consumed') + ': ' + h.amount), el('div',{class:'text-xs text-slate-600'}, h.note + (h.receivedFrom ? ` (From: ${h.receivedFrom})` : '')) ]) ) ), el('div',{class:'flex justify-end mt-3'}, el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Close')) ])); showAnimatedModal(modal); }
-
-  // edit modal for items
-  function openEditItem(it){
-    const modal = el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'}, el('div',{class:'bg-white p-4 rounded w-96'}, [
-      el('button',{class:'absolute right-2 top-2 text-slate-500 hover:text-black', onclick:()=> modal.remove()}, '✕'),
-      el('h3',{class:'font-semibold mb-2 mt-2'}, `Edit item: ${it.name}`),
-      el('div',{class:'space-y-2'}, [
-        el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Name'), el('input',{class:'w-full p-2 border rounded', value:it.name, id:'edit-name'}) ]),
-        el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Location'), el('input',{class:'w-full p-2 border rounded', value:it.location || '', id:'edit-location'}) ]),
-		el('div',{}, [
-  el('label',{class:'text-sm block mb-1'}, 'Received from'),
-  el('input',{
-    class:'w-full p-2 border rounded',
-    value: it.receivedFrom || '',
-    id: 'edit-received'
-  })
-]),
-        el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Qty'), el('div',{class:'text-sm text-slate-600'}, `Current Qty: ${it.qty}`)
- ]),
-        el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Unit'), el('select',{class:'w-36 p-2 border rounded', id:'edit-unit'}, [ el('option',{value:'Meter'}, 'Meter'), el('option',{value:'NO'}, 'NO') ]) ]),
-        el('div',{}, [ el('label',{class:'text-sm block mb-1'}, 'Category / Subcategory'), el('select',{class:'w-full p-2 border rounded', id:'edit-category'}, state.categories.map(c=> el('option',{value:c}, c))) ])
-      ]),
-      el('div',{class:'flex justify-end gap-2 mt-3'}, [ el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Cancel'), el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded', onclick:()=>{ const name = modal.querySelector('#edit-name').value.trim(); const loc = modal.querySelector('#edit-location').value.trim(); const unit = modal.querySelector('#edit-unit').value; const cat = modal.querySelector('#edit-category').value;const receivedFrom =
-  modal.querySelector('#edit-received').value.trim(); if(!name) return alert('Name required');
-updateItem(it.id, { 
-  name,
-  location: loc,
-  unit,
-  category: cat,
-  receivedFrom
-});
-modal.remove();
-document.dispatchEvent(new CustomEvent('statechange')); }}, 'Save') ])
-    ]));
+  function openHistory(id){
+    const it=state.items.find(x=>x.id===id); if(!it) return;
+    let histFrom='',histTo='';
+    const modal=el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'},
+      el('div',{class:'bg-white p-4 rounded-xl w-96 max-h-[70vh] overflow-auto'},[
+        el('button',{class:'absolute right-2 top-2 text-slate-500 hover:text-black',onclick:()=>modal.remove()},'✕'),
+        el('h3',{class:'font-semibold mb-2 mt-6'},`History for ${it.name}`),
+        el('div',{class:'text-sm font-medium mb-3 text-slate-700'},`Total Qty Available: ${it.qty}`),
+        el('div',{class:'flex gap-2 items-center mb-3'},[
+          el('div',{class:'flex items-center gap-1'},[el('label',{class:'text-xs'},'From'),el('input',{type:'date',class:'p-1 border rounded-lg text-xs ml-1',onchange:e=>histFrom=e.target.value})]),
+          el('div',{class:'flex items-center gap-1'},[el('label',{class:'text-xs'},'To'),el('input',{type:'date',class:'p-1 border rounded-lg text-xs ml-1',onchange:e=>histTo=e.target.value})]),
+          el('button',{class:'ml-auto px-2 py-1 bg-sky-600 text-white text-xs rounded-lg',onclick:()=>{
+            const rows=(it.history||[]).slice().sort((a,b)=>new Date(a.date)-new Date(b.date)).map(h=>({date:h.date,amount:h.note==='Stock added'?'+'+h.amount:'-'+h.amount,note:h.note,receivedFrom:h.receivedFrom||''}));
+            const csv=Papa.unparse(rows); const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
+            const a=document.createElement('a'); a.href=url; a.download=it.name.replaceAll(' ','_')+'_history.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+          }},'Export CSV')
+        ]),
+        el('div',{class:'space-y-2 text-sm text-slate-700'},(it.history||[]).slice().sort((a,b)=>new Date(b.date+'T00:00:00')-new Date(a.date+'T00:00:00'))
+          .filter(h=>{
+            if(histFrom&&new Date(h.date+'T00:00:00')<new Date(histFrom+'T00:00:00')) return false;
+            if(histTo){ const dayEnd=new Date(histTo); dayEnd.setDate(dayEnd.getDate()+1); if(new Date(h.date+'T00:00:00')>=dayEnd) return false; }
+            return true;
+          }).map(h=>el('div',{class:'border-b py-2 rounded px-1 '+(h.note==='Stock added'?'bg-green-50':'bg-red-50')},[
+            el('div',{class:'text-xs text-slate-500'},new Date(h.date+'T00:00:00').toLocaleDateString()),
+            el('div',{class:'font-medium'},(h.note==='Stock added'?'Added':'Consumed')+': '+h.amount),
+            el('div',{class:'text-xs text-slate-600'},h.note+(h.receivedFrom?` (From: ${h.receivedFrom})`:'')),
+          ]))),
+        el('div',{class:'flex justify-end mt-3'},el('button',{class:'px-3 py-1 border rounded-lg',onclick:()=>modal.remove()},'Close'))
+      ])
+    );
     showAnimatedModal(modal);
-    setTimeout(()=>{ try{ modal.querySelector('#edit-unit').value = it.unit || 'Meter'; modal.querySelector('#edit-category').value = it.category || decoded; }catch(e){} }, 20);
+  }
+
+  function openEditItem(it){
+    const modal=el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'},
+      el('div',{class:'bg-white p-4 rounded-xl w-96'},[
+        el('button',{class:'absolute right-2 top-2 text-slate-500 hover:text-black',onclick:()=>modal.remove()},'✕'),
+        el('h3',{class:'font-semibold mb-2 mt-2'},`Edit item: ${it.name}`),
+        el('div',{class:'space-y-2'},[
+          el('div',{},[el('label',{class:'text-sm block mb-1'},'Name'),el('input',{class:'w-full p-2 border rounded-lg',value:it.name,id:'edit-name'})]),
+          el('div',{},[el('label',{class:'text-sm block mb-1'},'Location'),el('input',{class:'w-full p-2 border rounded-lg',value:it.location||'',id:'edit-location'})]),
+          el('div',{},[el('label',{class:'text-sm block mb-1'},'Received from'),el('input',{class:'w-full p-2 border rounded-lg',value:it.receivedFrom||'',id:'edit-received'})]),
+          el('div',{},[el('label',{class:'text-sm block mb-1'},'Qty'),el('div',{class:'text-sm text-slate-600'},`Current Qty: ${it.qty}`)]),
+          el('div',{},[el('label',{class:'text-sm block mb-1'},'Unit'),el('select',{class:'w-36 p-2 border rounded-lg',id:'edit-unit'},[el('option',{value:'Meter'},'Meter'),el('option',{value:'NO'},'NO')])]),
+          el('div',{},[el('label',{class:'text-sm block mb-1'},'Category / Subcategory'),el('select',{class:'w-full p-2 border rounded-lg',id:'edit-category'},state.categories.map(c=>el('option',{value:c},c)))])
+        ]),
+        el('div',{class:'flex justify-end gap-2 mt-3'},[
+          el('button',{class:'px-3 py-1 border rounded-lg',onclick:()=>modal.remove()},'Cancel'),
+          el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded-lg',onclick:()=>{
+            const name=modal.querySelector('#edit-name').value.trim();
+            const loc=modal.querySelector('#edit-location').value.trim();
+            const unit=modal.querySelector('#edit-unit').value;
+            const cat=modal.querySelector('#edit-category').value;
+            const receivedFrom=modal.querySelector('#edit-received').value.trim();
+            if(!name) return alert('Name required');
+            updateItem(it.id,{name,location:loc,unit,category:cat,receivedFrom});
+            modal.remove(); document.dispatchEvent(new CustomEvent('statechange'));
+          }},'Save')
+        ])
+      ])
+    );
+    showAnimatedModal(modal);
+    setTimeout(()=>{ try{ modal.querySelector('#edit-unit').value=it.unit||'Meter'; modal.querySelector('#edit-category').value=it.category||decoded; }catch(e){} },20);
   }
 }
 
+/* ---- CATEGORIES ---- */
 function renderCategories(){
   clear(app);
-  const cont = el('div',{});
-
-  // Top: Special Category boxes A & B
-  const catBoxContainer = el('div',{class:'grid md:grid-cols-2 gap-4'}, []);
+  const cont=el('div',{});
+  const catBoxContainer=el('div',{class:'grid md:grid-cols-2 gap-4'},[]);
   ['A','B'].forEach(name=>{
-    const itemCount = state.items.filter(it => it.category === name).length;
-
-    const subPrefix = name + ' / ';
-    const subcats = (state.categories||[]).filter(c => c.startsWith(subPrefix));
-
-    const subList = el('ul',{class:'mt-3 space-y-2 text-sm'});
-    if(subcats.length === 0){
-      subList.appendChild(el('li',{class:'text-slate-500'}, 'No subcategories'));
+    const itemCount=state.items.filter(it=>it.category===name).length;
+    const subPrefix=name+' /';
+    const subcats=(state.categories||[]).filter(c=>c.startsWith(subPrefix));
+    const subList=el('ul',{class:'mt-3 space-y-2 text-sm'});
+    if(subcats.length===0){
+      subList.appendChild(el('li',{class:'text-slate-500'},'No subcategories'));
     } else {
-      subcats.forEach(sc => {
-        const scCount = state.items.filter(it => it.category === sc).length;
-        const scRow = el('li',{class:'flex items-center justify-between'}, [
-          el('div', {class: 'flex items-center gap-3'}, [ el('a',{href:'#/category/'+encodeURIComponent(sc), class:'text-sky-600'}, sc.replace(subPrefix, '')), el('div',{class:'text-xs text-slate-500'}, `${scCount} items`) ]),
-          el('div', {class: 'flex items-center gap-2'}, [ el('button',{class:'px-2 py-1 border rounded text-sm', onclick: ()=> showRename(sc) }, 'Rename') ])
+      subcats.forEach(sc=>{
+        const scCount=state.items.filter(it=>it.category===sc).length;
+        const scRow=el('li',{class:'flex items-center justify-between'},[
+          el('div',{class:'flex items-center gap-3'},[
+            el('a',{href:'#/category/'+encodeURIComponent(sc),class:'text-sky-600'},sc.replace(subPrefix+' /','')||sc.replace(subPrefix,'')),
+            el('div',{class:'text-xs text-slate-500'},`${scCount} items`)
+          ]),
+          el('div',{class:'flex items-center gap-2'},[
+            el('button',{class:'px-2 py-1 border rounded-lg text-sm',onclick:()=>showRename(sc)},'Rename')
+          ])
         ]);
         subList.appendChild(scRow);
       });
     }
-
-    const box = el('div',{class:'bg-white p-4 rounded shadow flex flex-col justify-between'},[
-      el('div',{}, [ el('h3',{class:'font-semibold mb-2'}, `Category ${name}`), el('div',{class:'text-sm text-slate-500 mb-2'}, `${itemCount} items`), subList ]),
+    const box=el('div',{class:'bg-white p-4 rounded-xl shadow category-box flex flex-col justify-between'},[
+      el('div',{},[el('h3',{class:'font-semibold mb-2'},`Category ${name}`),el('div',{class:'text-sm text-slate-500 mb-2'},`${itemCount} items`),subList]),
       (function(){
-        const wrap = el('form',{class:'flex gap-2 mt-3', onsubmit:(e)=>{ e.preventDefault(); const v = input.value.trim(); if(!v) return; const newName = name + ' / ' + v; addCategory(newName); input.value=''; document.dispatchEvent(new CustomEvent('statechange')); }},[]);
-        const input = el('input',{class:'flex-1 p-2 border rounded', placeholder:`New subcategory under ${name}`});
+        const wrap=el('form',{class:'flex gap-2 mt-3',onsubmit:(e)=>{ e.preventDefault(); const v=input.value.trim(); if(!v) return; addCategory(name+' / '+v); input.value=''; document.dispatchEvent(new CustomEvent('statechange')); }},[]);
+        const input=el('input',{class:'flex-1 p-2 border rounded-lg',placeholder:`New subcategory under ${name}`});
         wrap.appendChild(input);
-        wrap.appendChild(el('button',{class:'px-3 py-2 bg-green-600 text-white rounded'},'Create'));
+        wrap.appendChild(el('button',{class:'px-3 py-2 bg-green-600 text-white rounded-lg'},'Create'));
         return wrap;
       })()
     ]);
     catBoxContainer.appendChild(box);
   });
   cont.appendChild(catBoxContainer);
-
   app.appendChild(cont); renderUndo();
 
-  function showRename(c){ const modal = el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'}, el('div',{class:'bg-white p-4 rounded w-96'}, [ el('h3',{class:'font-semibold mb-2'}, 'Rename category'), el('div',{}, `Renaming: ${c}`), el('input',{class:'w-full p-2 border rounded my-2', value:c, id:'rn'}), el('div',{class:'flex justify-end gap-2'}, [ el('button',{class:'px-3 py-1 border rounded', onclick:()=> modal.remove()}, 'Cancel'), el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded', onclick:()=>{ const v = modal.querySelector('#rn').value.trim(); if(v) { editCategory(c,v); modal.remove(); document.dispatchEvent(new CustomEvent('statechange')); } }}, 'Save') ]) ])); showAnimatedModal(modal); }
-
-}
-function renderVehicleRecords() {
-  clear(app);
-
-  app.appendChild(
-    el(
-      'h2',
-      { class: 'text-2xl font-semibold mb-6' },
-      'Aerial Platform Vehicle Records'
-    )
-  );
-
-  // 🔹 GRID CONTAINER (2 columns on desktop)
-  const grid = el('div', {
-    class: 'grid grid-cols-1 lg:grid-cols-2 gap-6'
-  });
-
-  state.vehicleRecords.forEach(vehicle => {
-   const card = el('div', {
-  class: 'bg-white p-4 rounded shadow'
-}, [
-  el('div', { class: 'mb-4' }, [
-    el('h3', { class: 'text-lg font-semibold' }, vehicle.name),
-
-el('div', { class: 'text-sm text-slate-600 mt-1 space-y-1' }, [
-  el('div', {}, `Reg No: ${vehicle.info.regNo}`),
-  el('div', {}, `Make / Model: ${vehicle.info.makeModel}`),
-  el('div', {}, `Year: ${vehicle.info.year}`),
-
-  el(
-    'button',
-    {
-      class: 'mt-2 px-2 py-1 bg-sky-600 text-white rounded text-xs',
-      onclick: () => openVehicleInfoEditModal(vehicle.id)
-    },
-    'Edit Vehicle Info'
-  )
-])
-
-  ]),
-
-  buildVehicleTable(vehicle)
-]);
-
-
-    grid.appendChild(card);
-  });
-
-  app.appendChild(grid);
-}
-function getExpiryStatus(dateStr) {
-  if (!dateStr) return { color: '', label: '—' };
-
-  const today = new Date();
-  const expiry = new Date(dateStr + 'T00:00:00');
-
-  const diffDays = Math.ceil(
-    (expiry - today) / (1000 * 60 * 60 * 24)
-  );
-
-  if (diffDays < 0) {
-    return {
-      color: 'bg-red-100 text-red-700',
-      label: `Expired ${Math.abs(diffDays)} days ago`
-    };
-  }
-
-  if (diffDays <= 30) {
-    return {
-      color: 'bg-orange-100 text-orange-700',
-      label: `${diffDays} days left`
-    };
-  }
-
-  if (diffDays <= 60) {
-    return {
-      color: 'bg-yellow-100 text-yellow-700',
-      label: `${diffDays} days left`
-    };
-  }
-
-  return {
-    color: 'bg-green-100 text-green-700',
-    label: `${diffDays} days left`
-  };
-}
-
-function buildVehicleTable(vehicle) {
-  const rows = [
-    ['Insurance', 'insurance'],
-    ['Fitness Certificate', 'fitness'],
-    ['PUC', 'puc'],
-    ['Last Vehicle Servicing', 'vehicleService'],
-    ['Last OEM Servicing', 'oemService'],
-    ['Road Tax', 'roadTax']
-  ];
-
-  const table = el('table', { class: 'w-full text-sm border' });
-  const tbody = el('tbody', {});
-
-  table.appendChild(
-    el('thead', {}, el('tr', {}, [
-      el('th', { class: 'p-2 border text-left' }, 'Record'),
-      el('th', { class: 'p-2 border text-center' }, 'Valid upto'),
-      el('th', { class: 'p-2 border text-center' }, 'Document'),
-      el('th', { class: 'p-2 border text-center' }, 'Action')
-    ]))
-  );
-
-  rows.forEach(([label, key]) => {
-    const rec = vehicle.records[key];
-
-    tbody.appendChild(
-      el('tr', {}, [
-        el('td', { class: 'p-2 border font-medium' }, label),
-        (function() {
-  const status = getExpiryStatus(rec.date);
-
-  return el(
-    'td',
-    { class: `p-2 border text-center ${status.color} rounded` },
-    rec.date
-      ? `${rec.date} (${status.label})`
-      : '—'
-  );
-})(),
-
-        el(
-          'td',
-          { class: 'p-2 border text-center' },
-          rec.file
-            ? el(
-                'a',
-                {
-                  href: rec.file,
-                  target: '_blank',
-                  class: 'text-sky-600 underline'
-                },
-                'View'
-              )
-            : '—'
-        ),
-        el(
-          'td',
-          { class: 'p-2 border text-center' },
-          el(
-            'button',
-            {
-              class:
-                'px-2 py-1 bg-sky-600 text-white rounded text-xs',
-              onclick: () =>
-                openVehicleEditModal(vehicle.id, key)
-            },
-            'Update'
-          )
-        )
+  function showRename(c){
+    const modal=el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'},
+      el('div',{class:'bg-white p-4 rounded-xl w-96'},[
+        el('h3',{class:'font-semibold mb-2'},'Rename category'),
+        el('div',{},`Renaming: ${c}`),
+        el('input',{class:'w-full p-2 border rounded-lg my-2',value:c,id:'rn'}),
+        el('div',{class:'flex justify-end gap-2'},[
+          el('button',{class:'px-3 py-1 border rounded-lg',onclick:()=>modal.remove()},'Cancel'),
+          el('button',{class:'px-3 py-1 bg-sky-600 text-white rounded-lg',onclick:()=>{
+            const v=modal.querySelector('#rn').value.trim();
+            if(v){ editCategory(c,v); modal.remove(); document.dispatchEvent(new CustomEvent('statechange')); }
+          }},'Save')
+        ])
       ])
     );
-  });
+    showAnimatedModal(modal);
+  }
+}
 
+/* ---- VEHICLE RECORDS ---- */
+function renderVehicleRecords(){
+  clear(app);
+  app.appendChild(el('h2',{class:'text-2xl font-semibold mb-6'},'Aerial Platform Vehicle Records'));
+  const grid=el('div',{class:'grid grid-cols-1 lg:grid-cols-2 gap-6'});
+  state.vehicleRecords.forEach(vehicle=>{
+    const card=el('div',{class:'bg-white p-4 rounded-xl shadow category-box'},[
+      el('div',{class:'mb-4'},[
+        el('h3',{class:'text-lg font-semibold'},vehicle.name),
+        el('div',{class:'text-sm text-slate-600 mt-1 space-y-1'},[
+          el('div',{},`Reg No: ${vehicle.info.regNo}`),
+          el('div',{},`Make / Model: ${vehicle.info.makeModel}`),
+          el('div',{},`Year: ${vehicle.info.year}`),
+          el('button',{class:'mt-2 px-2 py-1 bg-sky-600 text-white rounded-lg text-xs',onclick:()=>openVehicleInfoEditModal(vehicle.id)},'Edit Vehicle Info')
+        ])
+      ]),
+      buildVehicleTable(vehicle)
+    ]);
+    grid.appendChild(card);
+  });
+  app.appendChild(grid);
+}
+
+function getExpiryStatus(dateStr){
+  if(!dateStr) return {color:'status-none',label:'—'};
+  const today=new Date(), expiry=new Date(dateStr+'T00:00:00');
+  const diffDays=Math.ceil((expiry-today)/(1000*60*60*24));
+  if(diffDays<0)   return {color:'status-danger',  label:`Expired ${Math.abs(diffDays)} days ago`};
+  if(diffDays<=30) return {color:'status-warn-30', label:`${diffDays} days left`};
+  if(diffDays<=60) return {color:'status-warn-60', label:`${diffDays} days left`};
+  return {color:'status-ok', label:`${diffDays} days left`};
+}
+
+function buildVehicleTable(vehicle){
+  const rows=[['Insurance','insurance'],['Fitness Certificate','fitness'],['PUC','puc'],
+              ['Last Vehicle Servicing','vehicleService'],['Last OEM Servicing','oemService'],['Road Tax','roadTax']];
+  const table=el('table',{class:'w-full text-sm border rounded-lg overflow-hidden'});
+  table.appendChild(el('thead',{},el('tr',{},[
+    el('th',{class:'p-2 border text-left'},'Record'),
+    el('th',{class:'p-2 border text-center'},'Valid upto'),
+    el('th',{class:'p-2 border text-center'},'Document'),
+    el('th',{class:'p-2 border text-center'},'Action')
+  ])));
+  const tbody=el('tbody',{});
+  rows.forEach(([label,key])=>{
+    const rec=vehicle.records[key];
+    const status=getExpiryStatus(rec.date);
+    tbody.appendChild(el('tr',{class:'anim-row-in'},[
+      el('td',{class:'p-2 border font-medium'},label),
+      el('td',{class:'p-2 border text-center'},
+        el('span',{class:`status-pill ${status.color}`}, rec.date ? `${rec.date}  ${status.label}` : '—')
+      ),
+      el('td',{class:'p-2 border text-center'}, rec.file
+        ? el('a',{href:rec.file,target:'_blank',class:'text-sky-600 underline'},'View')
+        : '—'),
+      el('td',{class:'p-2 border text-center'},
+        el('button',{class:'px-2 py-1 bg-sky-600 text-white rounded-lg text-xs',onclick:()=>openVehicleEditModal(vehicle.id,key)},'Update'))
+    ]));
+  });
   table.appendChild(tbody);
   return table;
 }
-function openVehicleEditModal(vehicleId, recordKey) {
-  const vehicle = state.vehicleRecords.find(v => v.id === vehicleId);
-  const rec = vehicle.records[recordKey];
 
-  const modal = el(
-    'div',
-    { class: 'fixed inset-0 bg-black/40 flex items-center justify-center' },
-    el('div', { class: 'bg-white p-4 rounded w-96' }, [
-      el('h3', { class: 'font-semibold mb-3' }, 'Update Record'),
-
-      el('input', {
-        type: 'date',
-        class: 'w-full p-2 border rounded mb-2',
-        value: rec.date,
-        onchange: e => (rec.date = e.target.value)
-      }),
-
-      el('input', {
-        type: 'file',
-        class: 'w-full p-2 border rounded mb-3',
-        onchange: e => {
-          const file = e.target.files[0];
-          if (file) {
-            rec.file = URL.createObjectURL(file);
-          }
-        }
-      }),
-
-      el('div', { class: 'flex justify-end gap-2' }, [
-        el(
-          'button',
-          {
-            class: 'px-3 py-1 border rounded',
-            onclick: () => modal.remove()
-          },
-          'Cancel'
-        ),
-        el(
-          'button',
-          {
-            class:
-              'px-3 py-1 bg-green-600 text-white rounded',
-            onclick: () => {
-              saveToSheet(state);
-              document.dispatchEvent(
-                new CustomEvent('statechange')
-              );
-              modal.remove();
-            }
-          },
-          'Save'
-        )
+function openVehicleEditModal(vehicleId,recordKey){
+  const vehicle=state.vehicleRecords.find(v=>v.id===vehicleId);
+  const rec=vehicle.records[recordKey];
+  const modal=el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'},
+    el('div',{class:'bg-white p-4 rounded-xl w-96'},[
+      el('h3',{class:'font-semibold mb-3'},'Update Record'),
+      el('input',{type:'date',class:'w-full p-2 border rounded-lg mb-2',value:rec.date,onchange:e=>rec.date=e.target.value}),
+      el('input',{type:'file',class:'w-full p-2 border rounded-lg mb-3',onchange:async(e)=>{
+        const file=e.target.files[0]; if(!file) return;
+        if(file.type!=='application/pdf'){ alert('Only PDF allowed'); return; }
+        const reader=new FileReader();
+        reader.onload=async function(event){
+          const base64=event.target.result.split(',')[1];
+          const formData=new URLSearchParams();
+          const fileName=`${vehicleId}_${recordKey}_${Date.now()}_${file.name}`;
+          formData.append('file',base64); formData.append('name',fileName); formData.append('type',file.type);
+          try {
+            const res=await fetch(API_URL,{method:'POST',body:formData});
+            const result=await res.json();
+            if(result.url){ rec.file=result.url; alert('Upload successful'); }
+            else alert('Upload failed');
+          } catch(err){ console.error(err); alert('Upload error'); }
+        };
+        reader.readAsDataURL(file);
+      }}),
+      el('div',{class:'flex justify-end gap-2'},[
+        el('button',{class:'px-3 py-1 border rounded-lg',onclick:()=>modal.remove()},'Cancel'),
+        el('button',{class:'px-3 py-1 bg-green-600 text-white rounded-lg',onclick:()=>{
+          saveToSheet(state); document.dispatchEvent(new CustomEvent('statechange')); modal.remove();
+        }},'Save')
       ])
     ])
   );
-
   showAnimatedModal(modal);
 }
-function openVehicleInfoEditModal(vehicleId) {
-  const vehicle = state.vehicleRecords.find(v => v.id === vehicleId);
-  if (!vehicle) return;
 
-  const modal = el(
-    'div',
-    { class: 'fixed inset-0 bg-black/40 flex items-center justify-center' },
-    el('div', { class: 'bg-white p-5 rounded w-96 space-y-3' }, [
-
-      el('h3', { class: 'font-semibold text-lg' }, 'Edit Vehicle Info'),
-
-      el('div', {}, [
-        el('label', { class: 'text-sm block mb-1' }, 'Registration Number'),
-        el('input', {
-          class: 'w-full p-2 border rounded',
-          value: vehicle.info.regNo,
-          id: 'edit-regno'
-        })
-      ]),
-
-      el('div', {}, [
-        el('label', { class: 'text-sm block mb-1' }, 'Make / Model'),
-        el('input', {
-          class: 'w-full p-2 border rounded',
-          value: vehicle.info.makeModel,
-          id: 'edit-make'
-        })
-      ]),
-
-      el('div', {}, [
-        el('label', { class: 'text-sm block mb-1' }, 'Year'),
-        el('input', {
-          class: 'w-full p-2 border rounded',
-          value: vehicle.info.year,
-          id: 'edit-year'
-        })
-      ]),
-
-      el('div', { class: 'flex justify-end gap-2 pt-3' }, [
-        el(
-          'button',
-          {
-            class: 'px-3 py-1 border rounded',
-            onclick: () => modal.remove()
-          },
-          'Cancel'
-        ),
-        el(
-          'button',
-          {
-            class: 'px-3 py-1 bg-green-600 text-white rounded',
-            onclick: () => {
-              vehicle.info.regNo =
-                modal.querySelector('#edit-regno').value.trim();
-              vehicle.info.makeModel =
-                modal.querySelector('#edit-make').value.trim();
-              vehicle.info.year =
-                modal.querySelector('#edit-year').value.trim();
-
-              saveToSheet(state);
-              document.dispatchEvent(new CustomEvent('statechange'));
-
-              modal.remove();
-            }
-          },
-          'Save'
-        )
+function openVehicleInfoEditModal(vehicleId){
+  const vehicle=state.vehicleRecords.find(v=>v.id===vehicleId); if(!vehicle) return;
+  const modal=el('div',{class:'fixed inset-0 bg-black/40 flex items-center justify-center'},
+    el('div',{class:'bg-white p-5 rounded-xl w-96 space-y-3'},[
+      el('h3',{class:'font-semibold text-lg'},'Edit Vehicle Info'),
+      el('div',{},[el('label',{class:'text-sm block mb-1'},'Registration Number'),el('input',{class:'w-full p-2 border rounded-lg',value:vehicle.info.regNo,id:'edit-regno'})]),
+      el('div',{},[el('label',{class:'text-sm block mb-1'},'Make / Model'),el('input',{class:'w-full p-2 border rounded-lg',value:vehicle.info.makeModel,id:'edit-make'})]),
+      el('div',{},[el('label',{class:'text-sm block mb-1'},'Year'),el('input',{class:'w-full p-2 border rounded-lg',value:vehicle.info.year,id:'edit-year'})]),
+      el('div',{class:'flex justify-end gap-2 pt-3'},[
+        el('button',{class:'px-3 py-1 border rounded-lg',onclick:()=>modal.remove()},'Cancel'),
+        el('button',{class:'px-3 py-1 bg-green-600 text-white rounded-lg',onclick:()=>{
+          vehicle.info.regNo=modal.querySelector('#edit-regno').value.trim();
+          vehicle.info.makeModel=modal.querySelector('#edit-make').value.trim();
+          vehicle.info.year=modal.querySelector('#edit-year').value.trim();
+          saveToSheet(state); document.dispatchEvent(new CustomEvent('statechange')); modal.remove();
+        }},'Save')
       ])
     ])
   );
-
   showAnimatedModal(modal);
 }
 
-
-/* small UI helpers & modal styles */
-function injectModalStyles(){ if(document.getElementById('modal-styles')) return; const s=document.createElement('style'); s.id='modal-styles'; s.textContent = `
-nav a { transition: background 120ms ease; }
-nav a:hover { background: rgba(59,130,246,0.10); }
-* { transform: none !important; box-shadow: none !important; }
-`; document.head.appendChild(s); }
-
-function showAnimatedModal(modal){ injectModalStyles(); modal.classList.add('modal-backdrop'); const content = modal.querySelector('div'); if(content) content.classList.add('modal-content'); document.body.appendChild(modal); requestAnimationFrame(()=> modal.classList.add('open')); const originalRemove = modal.remove.bind(modal); modal.remove = ()=>{ modal.classList.remove('open'); setTimeout(()=> originalRemove(), 260); }; }
+/* ---- MODAL HELPER ---- */
+function showAnimatedModal(modal){
+  modal.classList.add('modal-backdrop');
+  const content=modal.querySelector('div');
+  if(content) content.classList.add('modal-content');
+  document.body.appendChild(modal);
+  requestAnimationFrame(()=>modal.classList.add('open'));
+  const originalRemove=modal.remove.bind(modal);
+  modal.remove=()=>{ modal.classList.remove('open'); setTimeout(()=>originalRemove(),260); };
+}
 </script>
+
 <script>
-window.addEventListener('load', () => {
-  if (appReady) {
-    document.dispatchEvent(new CustomEvent('statechange'));
-  }
+window.addEventListener('load',()=>{
+  if(appReady) document.dispatchEvent(new CustomEvent('statechange'));
+  updateNavActive();
 });
 </script>
 </body>
