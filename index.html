@@ -5,16 +5,68 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Inventory Manager — EMD</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <style>
 /* ============================================================
-   ANIMATION & VISUAL ENHANCEMENT LAYER
+   DESIGN SYSTEM — EMD Inventory Manager
+   Brand palette:
+     --brand-teal:   #0d7377   (primary actions, links)
+     --brand-amber:  #d97706   (Category A / Lighting accent)
+     --brand-indigo: #4f46e5   (Category B / Cabling accent)
+     --brand-slate:  #1e293b   (headings, nav bg)
+     --page-bg:      #f4f6f9   (warm neutral background)
+   Typography:
+     Display/headings: DM Sans
+     Body/data:        Inter
    ============================================================ */
 
-/* --- Keyframes --- */
+:root {
+  --brand-teal:        #38bdf8;
+  --brand-teal-dark:   #0ea5e9;
+  --brand-teal-light:  #e0f2fe;
+  --brand-amber:       #fbbf24;
+  --brand-amber-light: #fef9c3;
+  --brand-indigo:      #818cf8;
+  --brand-indigo-light:#eef2ff;
+  --header-bg:         #ffffff;
+  --header-border:     #e2e8f0;
+  --page-bg:           #f8fafc;
+  --card-bg:           #ffffff;
+  --border:            rgba(0,0,0,.07);
+  --shadow-sm:         0 1px 4px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.03);
+  --shadow-md:         0 4px 16px rgba(0,0,0,.06), 0 1px 4px rgba(0,0,0,.03);
+  --shadow-lg:         0 12px 40px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.04);
+}
+
+/* --- Base typography --- */
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--page-bg);
+  color: #1e293b;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  letter-spacing: -.3px;
+}
+
+/* Tabular numbers for all data displays */
+.tabnum, td, .metric-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
 @keyframes fadeSlideIn {
   from { opacity:0; transform:translateY(14px); }
   to   { opacity:1; transform:translateY(0); }
@@ -35,124 +87,496 @@
   to   { opacity:1; transform:translateX(0); }
 }
 @keyframes toastIn {
-  from { opacity:0; transform:translateY(16px) translateX(-50%) scale(0.95); }
-  to   { opacity:1; transform:translateY(0)    translateX(-50%) scale(1); }
-}
-@keyframes toastOut {
-  from { opacity:1; transform:translateY(0)   translateX(-50%) scale(1); }
-  to   { opacity:0; transform:translateY(8px) translateX(-50%) scale(0.95); }
+  from { opacity:0; transform:translateY(16px) scale(0.95); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
 }
 @keyframes pieSlicePop {
   from { transform: scale(0.05); opacity:0; }
   to   { transform: scale(1);    opacity:1; }
 }
 @keyframes pulseRing {
-  0%   { box-shadow:0 0 0 0   rgba(59,130,246,.35); }
-  60%  { box-shadow:0 0 0 7px rgba(59,130,246,0); }
-  100% { box-shadow:0 0 0 0   rgba(59,130,246,0); }
-}
-@keyframes shimmer {
-  0%,100% { opacity:.5; }
-  50%     { opacity:1; }
+  0%   { box-shadow:0 0 0 0   rgba(13,115,119,.35); }
+  60%  { box-shadow:0 0 0 8px rgba(13,115,119,0); }
+  100% { box-shadow:0 0 0 0   rgba(13,115,119,0); }
 }
 @keyframes spinOnce {
   from { transform:rotate(0deg); }
   to   { transform:rotate(360deg); }
 }
-
-/* --- Global page load --- */
-body.app-ready #appShell {
-  animation: fadeSlideIn .45s ease both;
+@keyframes skeletonPulse {
+  0%, 100% { opacity: .5; }
+  50%       { opacity: 1; }
 }
 
-/* --- Header --- */
-#appShell header {
-  animation: fadeSlideIn .4s ease both;
+/* ============================================================
+   GLOBAL PAGE LOAD
+   ============================================================ */
+body.app-ready #appShell { animation: fadeSlideIn .45s ease both; }
+#appShell header         { animation: fadeSlideIn .4s ease both; }
+
+/* ============================================================
+   HEADER & NAV
+   ============================================================ */
+#appShell > div > header {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 12px 20px;
+  margin-bottom: 22px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #e9eef5;
+}
+#appShell > div > header h1 {
+  color: #1e293b;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -.4px;
+}
+#appShell > div > header .text-sm {
+  color: #94a3b8;
+  font-size: 11.5px;
 }
 
-/* --- Nav links --- */
+/* Nav pill container */
+nav {
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
 nav a {
-  display:inline-block;
-  padding:5px 12px;
-  border-radius:8px;
-  font-size:13.5px;
-  font-weight:500;
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
   transition: background .15s, color .15s, transform .12s;
-  text-decoration:none;
-  color:#0ea5e9;
+  text-decoration: none;
+  color: #475569;
 }
 nav a:hover {
-  background:rgba(14,165,233,.1);
-  transform:translateY(-1px);
-  text-decoration:none;
+  background: #e2e8f0;
+  color: #1e293b;
+  transform: translateY(-1px);
+  text-decoration: none;
 }
 nav a.nav-active {
-  background:rgba(14,165,233,.13);
+  background: var(--brand-teal-dark);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(14,165,233,.25);
 }
 
-/* --- Logout button --- */
+/* Logout */
 #logoutBtn {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+  border: 1px solid #fecaca !important;
+  border-radius: 8px !important;
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
   transition: background .15s, transform .12s, box-shadow .15s !important;
 }
 #logoutBtn:hover {
-  transform:translateY(-1px) !important;
-  box-shadow:0 3px 10px rgba(220,38,38,.25) !important;
+  background: #fecaca !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 3px 10px rgba(220,38,38,.15) !important;
 }
 
-/* --- Metric summary cards (Home page) --- */
+/* ============================================================
+   METRIC CARDS
+   ============================================================ */
 .metric-card {
-  background:#fff;
-  border-radius:14px;
-  border:1px solid rgba(0,0,0,.07);
-  padding:18px 20px;
+  background: var(--card-bg);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 20px 22px 18px;
+  box-shadow: var(--shadow-sm);
   animation: cardEntrance .45s ease both;
+  position: relative;
+  overflow: hidden;
 }
-.metric-card:nth-child(1){animation-delay:.05s}
-.metric-card:nth-child(2){animation-delay:.10s}
-.metric-card:nth-child(3){animation-delay:.15s}
-.metric-card:nth-child(4){animation-delay:.20s}
+.metric-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  border-radius: 4px 0 0 4px;
+  background: var(--card-accent, #94a3b8);
+}
+.metric-card:nth-child(1){ animation-delay:.05s; --card-accent:#7dd3fc; }
+.metric-card:nth-child(2){ animation-delay:.10s; --card-accent:#fcd34d; }
+.metric-card:nth-child(3){ animation-delay:.15s; --card-accent:#a5b4fc; }
+.metric-card:nth-child(4){ animation-delay:.20s; --card-accent:#67e8f9; }
+
+.metric-icon {
+  font-size: 22px;
+  margin-bottom: 10px;
+  display: block;
+  line-height: 1;
+}
 .metric-label {
-  font-size:11px;
-  font-weight:600;
-  text-transform:uppercase;
-  letter-spacing:.7px;
-  color:#94a3b8;
-  margin-bottom:6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: #94a3b8;
+  margin-bottom: 5px;
 }
 .metric-value {
-  font-size:28px;
-  font-weight:700;
-  letter-spacing:-1px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  line-height: 1;
   animation: countUp .5s .3s ease both;
+  font-variant-numeric: tabular-nums;
 }
 .metric-sub {
-  font-size:11px;
-  color:#94a3b8;
-  margin-top:3px;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 5px;
+  font-family: 'Inter', sans-serif;
 }
 
-/* --- Section cards entrance --- */
+/* ============================================================
+   SKELETON LOADER
+   ============================================================ */
+.skeleton {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: skeletonSlide 1.4s ease infinite;
+  border-radius: 8px;
+}
+@keyframes skeletonSlide {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 20px 22px 18px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  position: relative;
+}
+.skeleton-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: #e2e8f0;
+  border-radius: 4px 0 0 4px;
+}
+.skeleton-line {
+  height: 10px;
+  margin-bottom: 8px;
+  border-radius: 5px;
+}
+.skeleton-value {
+  height: 32px;
+  width: 60%;
+  margin: 8px 0 6px;
+  border-radius: 8px;
+}
+.skeleton-section {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ============================================================
+   SECTION CARDS
+   ============================================================ */
 section.bg-white {
   animation: cardEntrance .45s ease both;
-  border-radius:14px !important;
+  border-radius: 16px !important;
+  box-shadow: var(--shadow-sm) !important;
+  border: 1px solid var(--border) !important;
 }
 
-/* --- Pie slice animation (applied via JS) --- */
-.pie-animated {
-  transform-origin: var(--cx, 120px) var(--cy, 120px);
-  animation: pieSlicePop .5s cubic-bezier(.2,.8,.2,1) both;
+/* Section heading style */
+.section-heading {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--brand-slate);
+  letter-spacing: -.2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-.pie-animated:nth-child(1){animation-delay:.06s}
-.pie-animated:nth-child(2){animation-delay:.14s}
-.pie-animated:nth-child(3){animation-delay:.22s}
-.pie-animated:nth-child(4){animation-delay:.30s}
-.pie-animated:nth-child(5){animation-delay:.38s}
-.pie-animated:nth-child(6){animation-delay:.46s}
+.section-heading::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+  background: #7dd3fc;
+  flex-shrink: 0;
+}
 
-/* --- Bar rows in activity/history --- */
-.anim-row-in {
-  animation: rowIn .3s ease both;
+/* ============================================================
+   PIE CHART SECTION
+   ============================================================ */
+.pie-card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 20px 24px;
+  transition: box-shadow .2s;
 }
+.pie-card:hover {
+  box-shadow: var(--shadow-md);
+}
+.pie-card-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.pie-card-title.cat-a { color: #d97706; }
+.pie-card-title.cat-b { color: #6366f1; }
+
+.pie-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-family: 'Inter', sans-serif;
+}
+.pie-legend-row:hover { background: #f8fafc; }
+.pie-legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.pie-legend-qty {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* SVG pie drop-shadow */
+.pie-svg {
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,.09));
+}
+
+/* ============================================================
+   TABLES
+   ============================================================ */
+table {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+}
+thead tr {
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+}
+thead th {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  color: #64748b;
+  padding: 10px 12px;
+}
+thead th:first-child { text-align: left; }
+tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background .12s;
+}
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(13,115,119,.04); }
+tbody td {
+  padding: 10px 12px;
+  color: #334155;
+  font-variant-numeric: tabular-nums;
+}
+/* Right-align numeric columns */
+td.num { text-align: right; }
+/* Sticky thead on scrollable tables */
+.table-scroll { overflow-x: auto; }
+.table-scroll thead th { position: sticky; top: 0; background: #f8fafc; z-index: 1; }
+
+/* Table action buttons */
+.tbl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  transition: background .13s, border-color .13s, transform .1s, box-shadow .13s;
+  white-space: nowrap;
+}
+.tbl-btn:hover {
+  background: #fff;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+  transform: translateY(-1px);
+}
+.tbl-btn-primary {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+.tbl-btn-primary:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+.tbl-btn-danger {
+  color: #dc2626;
+  border-color: #fecaca;
+  background: #fff5f5;
+}
+.tbl-btn-danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+/* ============================================================
+   VEHICLE RECORDS
+   ============================================================ */
+.vehicle-card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: box-shadow .2s, transform .2s;
+}
+.vehicle-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.vehicle-card-header {
+  background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);
+  border-bottom: 1px solid #bfdbfe;
+  padding: 16px 18px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.vehicle-icon {
+  width: 40px; height: 40px;
+  background: #dbeafe;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.vehicle-name {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e3a5f;
+  letter-spacing: -.2px;
+}
+.vehicle-meta {
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 2px;
+  font-family: 'Inter', sans-serif;
+}
+.vehicle-body {
+  padding: 16px 18px;
+}
+.vehicle-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.vehicle-info-item label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: #94a3b8;
+  display: block;
+  margin-bottom: 2px;
+  font-family: 'Inter', sans-serif;
+}
+.vehicle-info-item span {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Vehicle table */
+.vehicle-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.vehicle-table thead th {
+  background: #f1f5f9;
+  font-size: 10.5px;
+  letter-spacing: .5px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.vehicle-table tbody td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+.vehicle-table tbody tr:last-child td { border-bottom: none; }
+.vehicle-table tbody tr:hover { background: #f8fafc; }
+
+/* Expiry progress bar under vehicle table row */
+.expiry-bar-wrap { margin-top: 4px; height: 3px; border-radius: 2px; background: #e2e8f0; overflow: hidden; }
+.expiry-bar-fill { height: 100%; border-radius: 2px; transition: width .6s ease; }
+
+/* ============================================================
+   STATUS PILLS
+   ============================================================ */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  letter-spacing: .2px;
+  font-family: 'Inter', sans-serif;
+  white-space: nowrap;
+}
+.status-ok      { background: rgba(34,197,94,.12);  color: #15803d; }
+.status-warn-60 { background: rgba(234,179,8,.15);  color: #a16207; }
+.status-warn-30 { background: rgba(249,115,22,.15); color: #c2410c; }
+.status-danger  { background: rgba(239,68,68,.12);  color: #dc2626; }
+.status-none    { background: rgba(148,163,184,.1); color: #94a3b8; }
+
+/* ============================================================
+   ANIMATED BAR ROWS
+   ============================================================ */
+.anim-row-in { animation: rowIn .3s ease both; }
 .anim-row-in:nth-child(1){animation-delay:.04s}
 .anim-row-in:nth-child(2){animation-delay:.08s}
 .anim-row-in:nth-child(3){animation-delay:.12s}
@@ -164,15 +588,15 @@ section.bg-white {
 .anim-row-in:nth-child(9){animation-delay:.36s}
 .anim-row-in:nth-child(10){animation-delay:.40s}
 
-/* --- Animated bars --- */
 .qty-bar {
-  height:8px;
-  border-radius:4px;
+  height: 8px;
+  border-radius: 4px;
   animation: barGrow .7s cubic-bezier(.2,.8,.2,1) both;
 }
-.qty-bar:nth-child(1){animation-delay:.1s}
 
-/* --- Buttons --- */
+/* ============================================================
+   BUTTONS (global)
+   ============================================================ */
 button, .btn {
   transition: background .15s, transform .12s, box-shadow .15s, opacity .15s !important;
 }
@@ -183,141 +607,152 @@ button:hover:not(.no-pop):not([disabled]) {
 button:active:not(.no-pop):not([disabled]) {
   transform: scale(.97) translateY(0) !important;
 }
-.btn-record:hover {
-  animation: pulseRing 1.4s ease;
-}
+.btn-record:hover { animation: pulseRing 1.4s ease; }
 
-/* --- Form inputs focus ring --- */
+/* Branded primary button */
+.btn-brand {
+  background: #0ea5e9 !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 600 !important;
+}
+.btn-brand:hover { background: #0284c7 !important; }
+
+/* ============================================================
+   FORM INPUTS
+   ============================================================ */
 input[type="text"], input[type="number"], input[type="date"],
 input[type="password"], select, textarea {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
   transition: border-color .15s, box-shadow .15s !important;
-  outline:none !important;
+  outline: none !important;
+  border-color: #e2e8f0 !important;
 }
-input[type="text"]:focus, input[type="number"]:focus,
-input[type="date"]:focus, input[type="password"]:focus,
-select:focus, textarea:focus {
-  border-color:#3b82f6 !important;
-  box-shadow:0 0 0 3px rgba(59,130,246,.15) !important;
+input:focus, select:focus, textarea:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56,189,248,.15) !important;
 }
 
-/* --- Login page card entrance --- */
+/* ============================================================
+   LOGIN PAGE
+   ============================================================ */
+#loginPage {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
 #loginPage > div {
   animation: cardEntrance .5s .1s ease both;
+  border: 1px solid #e2e8f0 !important;
 }
+#loginPage h1 { font-family: 'DM Sans', sans-serif; }
+#loginSpinner { animation: spinOnce 1s linear infinite; }
 
-/* --- Login button spinner --- */
-#loginSpinner {
-  animation: spinOnce 1s linear infinite;
-}
-
-/* --- Toast / Undo snackbar (upgraded) --- */
+/* ============================================================
+   TOAST / UNDO SNACKBAR
+   ============================================================ */
 #undo-snack {
   animation: toastIn .3s ease both !important;
-  border-radius:12px !important;
-  border:.5px solid rgba(255,255,255,.15) !important;
-  box-shadow:0 8px 28px rgba(0,0,0,.25) !important;
-  font-size:13px !important;
+  border-radius: 12px !important;
+  border: .5px solid rgba(255,255,255,.15) !important;
+  box-shadow: 0 8px 28px rgba(0,0,0,.25) !important;
+  font-size: 13px !important;
+  font-family: 'Inter', sans-serif !important;
 }
 #undo-snack button {
-  border-radius:7px !important;
-  font-size:12px !important;
-  font-weight:600 !important;
+  border-radius: 7px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
   transition: opacity .12s !important;
 }
 #undo-snack button:hover {
-  opacity:.8 !important;
-  transform:none !important;
-  box-shadow:none !important;
+  opacity: .8 !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
-/* --- Modal backdrop & content --- */
-.modal-backdrop {
-  opacity:0;
-  transition: opacity .22s ease;
-}
-.modal-backdrop.open {
-  opacity:1;
-}
+/* ============================================================
+   MODAL
+   ============================================================ */
+.modal-backdrop { opacity:0; transition: opacity .22s ease; }
+.modal-backdrop.open { opacity:1; }
 .modal-content {
   transform: scale(0.93) translateY(10px);
-  opacity:0;
+  opacity: 0;
   transition: transform .26s cubic-bezier(.2,.8,.2,1), opacity .22s ease;
-  border-radius:14px !important;
-  box-shadow:0 20px 60px rgba(0,0,0,.2) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2) !important;
+  font-family: 'Inter', sans-serif;
 }
 .modal-backdrop.open .modal-content {
   transform: scale(1) translateY(0);
-  opacity:1;
+  opacity: 1;
 }
 
-/* --- Status pills for vehicle records --- */
-.status-pill {
-  display:inline-block;
-  font-size:11px;
-  font-weight:600;
-  padding:3px 9px;
-  border-radius:20px;
-  letter-spacing:.2px;
-}
-.status-ok      { background:rgba(34,197,94,.12);  color:#15803d; }
-.status-warn-60 { background:rgba(234,179,8,.15);  color:#a16207; }
-.status-warn-30 { background:rgba(249,115,22,.15); color:#c2410c; }
-.status-danger  { background:rgba(239,68,68,.12);  color:#dc2626; }
-.status-none    { background:rgba(148,163,184,.1); color:#94a3b8; }
+/* ============================================================
+   ACTIVITY ENTRIES
+   ============================================================ */
+.activity-added    { border-left: 3px solid #22c55e !important; }
+.activity-consumed { border-left: 3px solid #ef4444 !important; }
 
-/* --- Table rows hover --- */
-tbody tr:hover {
-  background:rgba(14,165,233,.04);
-  transition: background .12s;
-}
-
-/* --- Export button glow --- */
-.btn-export:hover {
-  box-shadow:0 4px 14px rgba(5,150,105,.35) !important;
-}
-
-/* --- Section headings --- */
-section h2.text-lg {
-  letter-spacing:-.2px;
-}
-
-/* --- Category boxes --- */
+/* ============================================================
+   CATEGORY BOXES
+   ============================================================ */
 .category-box {
   transition: box-shadow .18s, transform .15s;
 }
 .category-box:hover {
-  box-shadow:0 6px 20px rgba(0,0,0,.07);
-  transform:translateY(-2px);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
-/* --- Activity entry color indicators --- */
-.activity-added   { border-left:3px solid #22c55e !important; }
-.activity-consumed{ border-left:3px solid #ef4444 !important; }
+/* ============================================================
+   EXPORT BUTTON
+   ============================================================ */
+.btn-export:hover {
+  box-shadow: 0 4px 14px rgba(13,115,119,.4) !important;
+}
 
-/* --- Vehicle card entrance stagger --- */
+/* ============================================================
+   FOOTER
+   ============================================================ */
+#appShell footer {
+  font-family: 'Inter', sans-serif;
+  font-size: 11.5px;
+  color: #94a3b8;
+  text-align: center;
+  padding-top: 8px;
+}
+
+/* ============================================================
+   STAGGER ENTRANCE
+   ============================================================ */
 #app .grid > div:nth-child(1) { animation: cardEntrance .4s .08s ease both; }
 #app .grid > div:nth-child(2) { animation: cardEntrance .4s .16s ease both; }
 
-/* --- Suppress hover on no-pop --- */
+/* ============================================================
+   NO-POP SUPPRESSOR
+   ============================================================ */
 .no-pop *, .no-pop *:hover {
-  transform:none !important;
-  box-shadow:none !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 .no-pop button:hover {
-  transform:none !important;
-  box-shadow:none !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 </style>
 </head>
 
-<body class="min-h-screen bg-slate-50 text-slate-900">
+<body class="min-h-screen text-slate-900" style="background:var(--page-bg)">
 
 <!-- ================= LOGIN PAGE ================= -->
 <div
   id="loginPage"
-  class="min-h-screen flex items-center justify-center bg-slate-100 px-6"
+  class="min-h-screen flex items-center justify-center px-6"
 >
-  <div class="flex flex-col md:flex-row items-center gap-14 bg-white rounded-xl shadow-xl p-12 max-w-6xl w-full">
+  <div class="flex flex-col md:flex-row items-center gap-14 bg-white rounded-2xl shadow-2xl p-12 max-w-6xl w-full">
 
     <!-- LEFT: Illustration -->
     <div class="md:w-1/2 flex justify-center">
@@ -325,17 +760,20 @@ section h2.text-lg {
         src="login-illustration.png"
         alt="Inventory illustration"
         class="max-w-full h-auto"
+        onerror="this.style.display='none'"
       />
     </div>
 
     <!-- RIGHT: Login box -->
     <div class="md:w-1/2 w-full max-w-sm">
 
-      <h1 class="text-2xl font-bold mb-1 text-center">
+      <h1 class="text-3xl font-bold mb-1 text-center" style="font-family:'DM Sans',sans-serif;color:#1e293b;letter-spacing:-.5px">
         Inventory Manager
       </h1>
-
-      <p class="text-sm text-slate-500 mb-6 text-center">
+      <div class="flex justify-center mb-1">
+        <span style="display:inline-block;width:36px;height:3px;background:var(--brand-teal);border-radius:2px"></span>
+      </div>
+      <p class="text-sm text-slate-400 mb-8 text-center" style="font-family:'Inter',sans-serif">
         created by Amit Nayak
       </p>
 
@@ -343,12 +781,14 @@ section h2.text-lg {
         id="loginPassword"
         type="password"
         placeholder="Enter admin password"
-        class="w-full border px-4 py-2 rounded mb-4"
+        class="w-full border px-4 py-3 rounded-xl mb-4"
+        style="font-family:'Inter',sans-serif;font-size:14px;border-color:#e2e8f0"
       />
 
       <button
         id="loginSubmit"
-        class="w-full py-2 bg-slate-800 text-white rounded flex items-center justify-center gap-2"
+        class="w-full py-3 text-white rounded-xl flex items-center justify-center gap-2 font-semibold"
+        style="background:#0ea5e9;font-family:'Inter',sans-serif;font-size:14px"
       >
         <span id="loginBtnText">Login</span>
         <svg id="loginSpinner" class="hidden w-5 h-5 text-white"
@@ -373,21 +813,22 @@ section h2.text-lg {
 
     <header class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold">Inventory Manager</h1>
-        <div class="text-sm text-slate-500">Created by Amit Nayak</div>
+        <h1 class="text-2xl font-bold">Inventory Manager — EMD</h1>
+        <div class="text-sm">Created by Amit Nayak</div>
       </div>
 
-      <div class="flex items-center gap-4">
-        <nav class="flex items-center gap-1 text-sky-600">
+      <div class="flex items-center gap-3">
+        <nav class="flex items-center gap-1">
           <a href="#/">Home</a>
           <a href="#/categories">Inventories</a>
           <a href="#/sync">Export Data</a>
           <a href="#/activities">Log History</a>
           <a href="#/vehicles">Vehicle Records</a>
+          <a href="#/ladders">Ladder Records</a>
         </nav>
 
         <button id="logoutBtn"
-          class="px-3 py-1 bg-red-600 text-white rounded">
+          class="px-4 py-2 rounded-lg text-sm font-semibold">
           Logout
         </button>
       </div>
@@ -395,8 +836,8 @@ section h2.text-lg {
 
     <main id="app" class="space-y-6"></main>
 
-    <footer class="mt-8 text-sm text-slate-600">
-      Synced with Google Sheets
+    <footer class="mt-8" id="appFooter">
+      Synced with Google Sheets · <span id="syncTimestamp">Loading…</span>
     </footer>
   </div>
 </div>
@@ -413,7 +854,48 @@ function injectHoverStyles(){
   document.head.appendChild(s);
 }
 
-/* ===== METRIC CARDS — rendered at top of Home page ===== */
+/* ===== SKELETON LOADER ===== */
+function renderSkeletonHome() {
+  // Use innerHTML directly since clear() may not be defined yet at call time
+  app.innerHTML = '';
+  // Metric cards skeleton
+  const grid = document.createElement('div');
+  grid.className = 'grid grid-cols-2 md:grid-cols-4 gap-4 mb-6';
+  for (let i = 0; i < 4; i++) {
+    const card = document.createElement('div');
+    card.className = 'skeleton-card';
+    card.innerHTML = `
+      <div class="skeleton skeleton-line" style="width:50%;height:10px"></div>
+      <div class="skeleton skeleton-value"></div>
+      <div class="skeleton skeleton-line" style="width:70%;margin-top:4px;height:10px"></div>
+    `;
+    grid.appendChild(card);
+  }
+  app.appendChild(grid);
+  // Overview section skeleton
+  const overview = document.createElement('div');
+  overview.className = 'skeleton-section';
+  overview.innerHTML = `
+    <div class="skeleton skeleton-line" style="width:120px;height:14px;margin-bottom:20px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div style="display:flex;gap:16px;align-items:center">
+        <div class="skeleton" style="width:220px;height:220px;border-radius:50%;flex-shrink:0"></div>
+        <div style="flex:1">
+          ${[60,45,70,55,40].map(w=>`<div class="skeleton skeleton-line" style="width:${w}%"></div>`).join('')}
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;align-items:center">
+        <div class="skeleton" style="width:220px;height:220px;border-radius:50%;flex-shrink:0"></div>
+        <div style="flex:1">
+          ${[50,65,40,75,55].map(w=>`<div class="skeleton skeleton-line" style="width:${w}%"></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+  app.appendChild(overview);
+}
+
+/* ===== METRIC CARDS ===== */
 function renderMetricCards() {
   const totalItems = state.items.length;
   const aItems = state.items.filter(i => i.category === 'A' || i.category.startsWith('A /')).length;
@@ -424,15 +906,16 @@ function renderMetricCards() {
   }).length;
 
   const cards = [
-    { label:'Total Items',   value: totalItems,   color:'#3b82f6', sub:'across all categories' },
-    { label:'Lighting (A)',  value: aItems,        color:'#22c55e', sub:'Category A items' },
-    { label:'Cabling (B)',   value: bItems,        color:'#3b82f6', sub:'Category B items' },
-    { label:'Activity (7d)', value: recentCount,   color:'#f59e0b', sub:'entries this week' },
+    { label:'Total Items',   value: totalItems,   color:'#38bdf8', sub:'across all categories', icon:'📦' },
+    { label:'Lighting (A)',  value: aItems,        color:'#fbbf24', sub:'Category A items', icon:'💡' },
+    { label:'Cabling (B)',   value: bItems,        color:'#818cf8', sub:'Category B items', icon:'🔌' },
+    { label:'Activity (7d)', value: recentCount,   color:'#34d399', sub:'entries this week', icon:'📋' },
   ];
 
   const grid = el('div', { class:'grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 no-pop' });
   cards.forEach((c, i) => {
-    const card = el('div', { class:'metric-card bg-white rounded-xl p-5 shadow-sm' }, [
+    const card = el('div', { class:'metric-card' }, [
+      el('span', { class:'metric-icon' }, c.icon),
       el('div', { class:'metric-label' }, c.label),
       el('div', { class:'metric-value', style:`color:${c.color}`, 'data-target': c.value }, '0'),
       el('div', { class:'metric-sub' }, c.sub),
@@ -440,7 +923,6 @@ function renderMetricCards() {
     grid.appendChild(card);
   });
 
-  // Animate count-up after DOM insert
   requestAnimationFrame(() => {
     setTimeout(() => {
       grid.querySelectorAll('.metric-value').forEach(el => {
@@ -478,7 +960,7 @@ window.addEventListener('hashchange', updateNavActive);
 
 <script>
 /* ================= GOOGLE SHEET SYNC ================= */
-const API_URL = 'https://script.google.com/macros/s/AKfycbww_COPZKXSkU0UczZeyQxj3zRE2z4WiWFNSkME2WNKr8K-kykM6wxeVsgaziSRnuvA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwYUe2czAX6RH4GbjJAqkQ9XZvNZ1VOUrxRpheEMJvgjad5NeIhkNrypL3qOjvfGA8I/exec';
 
 let sheetLoaded = false;
 let appReady = false;
@@ -486,6 +968,7 @@ let appReady = false;
 let state = {
   categories: ['A', 'B'],
   items: [],
+  ladders: [],
   vehicleRecords: [
     {
       id: 'APV-1',
@@ -512,17 +995,80 @@ let state = {
 
 const EXPORT_EXCLUDE_IDS = new Set();
 
+/* ---- Save status indicator ---- */
+function showSaveStatus(state) {
+  let el = document.getElementById('save-status');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'save-status';
+    el.style.cssText = `
+      position:fixed; bottom:20px; right:20px; z-index:9999;
+      display:flex; align-items:center; gap:8px;
+      padding:8px 14px; border-radius:10px;
+      font-family:'Inter',sans-serif; font-size:12px; font-weight:600;
+      box-shadow:0 4px 16px rgba(0,0,0,.12);
+      transition: opacity .3s ease, transform .3s ease;
+    `;
+    document.body.appendChild(el);
+  }
+  if (state === 'saving') {
+    el.style.background = '#fffbeb';
+    el.style.border = '1px solid #fcd34d';
+    el.style.color = '#92400e';
+    el.style.opacity = '1';
+    el.style.transform = 'translateY(0)';
+    el.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border:2px solid #f59e0b;border-top-color:transparent;border-radius:50%;animation:spinOnce 1s linear infinite"></span> Saving…`;
+  } else if (state === 'saved') {
+    el.style.background = '#f0fdf4';
+    el.style.border = '1px solid #86efac';
+    el.style.color = '#15803d';
+    el.style.opacity = '1';
+    el.style.transform = 'translateY(0)';
+    el.innerHTML = `✅ Saved`;
+    setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(6px)'; }, 2000);
+  } else if (state === 'error') {
+    el.style.background = '#fef2f2';
+    el.style.border = '1px solid #fca5a5';
+    el.style.color = '#dc2626';
+    el.style.opacity = '1';
+    el.style.transform = 'translateY(0)';
+    el.innerHTML = `❌ Save failed — check console`;
+    setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(6px)'; }, 4000);
+  }
+}
+
 async function saveToSheet(data) {
-  if (!appReady) return;
+  if (!appReady) { console.warn('⏸️ Save skipped — app not ready'); return; }
+  showSaveStatus('saving');
+
+  // Build FormData — this is the ONLY format that:
+  // 1. Works with mode:'no-cors' (doesn't trigger preflight)
+  // 2. Maps to e.parameter.data in Google Apps Script doPost()
+  const fd = new FormData();
+  fd.append('data', JSON.stringify(data));
+
   try {
-    const formData = new URLSearchParams();
-    formData.append('data', JSON.stringify(data));
-    const res = await fetch(API_URL, { method: 'POST', body: formData });
-    const text = await res.text();
-    console.log('✅ Saved to Google Sheet:', text);
-  } catch (err) {
-    console.error('❌ Failed to save data to Google Sheet', err);
-    alert('Failed to save data to Google Sheet');
+    // First attempt: normal fetch (works when served from http/https)
+    const res = await fetch(API_URL, { method: 'POST', body: fd });
+    console.log('✅ Saved to Google Sheet (normal)');
+    showSaveStatus('saved');
+    const ts = document.getElementById('syncTimestamp');
+    if (ts) ts.textContent = new Date().toLocaleTimeString();
+  } catch (corsErr) {
+    // Second attempt: no-cors fire-and-forget (for file:// origins)
+    console.warn('⚠️ Normal POST blocked (CORS), retrying with no-cors…', corsErr.message);
+    try {
+      const fd2 = new FormData();
+      fd2.append('data', JSON.stringify(data));
+      await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: fd2 });
+      console.log('✅ Saved via no-cors (Apps Script received it)');
+      showSaveStatus('saved');
+      const ts = document.getElementById('syncTimestamp');
+      if (ts) ts.textContent = new Date().toLocaleTimeString();
+    } catch (err2) {
+      console.error('❌ Both save attempts failed:', err2);
+      showSaveStatus('error');
+    }
   }
 }
 </script>
@@ -532,29 +1078,53 @@ async function loadFromSheet() {
   console.log('🔄 Loading from Google Sheet...');
   if (sheetLoaded) return;
   sheetLoaded = true;
+
+  if (typeof renderSkeletonHome === 'function') renderSkeletonHome();
+
+  // Try fetch first (works when served from http/https)
+  // Fall back to JSONP (works from file://)
+  let data = null;
+
   try {
-    const res = await fetch(API_URL);
-    const data = await res.json();
+    const res = await fetch(API_URL + '?_t=' + Date.now());
+    data = await res.json();
+  } catch (fetchErr) {
+    console.warn('⚠️ fetch blocked (file:// origin?), trying JSONP…');
+    data = await loadViaJSONP(API_URL);
+  }
+
+  try {
     if (!data || !Array.isArray(data.items)) throw new Error('Invalid sheet data');
     state = data;
+    console.log(`📦 Loaded ${state.items.length} items from Google Sheet`);
+
+    if (state.items.length === 0) {
+      try {
+        const backup = localStorage.getItem('emd_inventory_backup');
+        if (backup) {
+          const backupData = JSON.parse(backup);
+          if (backupData.items && backupData.items.length > 0) {
+            const restore = confirm(
+              `⚠️ Google Sheet returned 0 items, but a local backup has ${backupData.items.length} items.\n\nRestore from local backup?`
+            );
+            if (restore) { state = backupData; saveToSheet(state); }
+          }
+        }
+      } catch(e) {}
+    }
 
     const defaultVehicles = [
       { id:'APV-1', name:'Aerial Platform Vehicle – 15 Mtr', info:{ regNo:'UP32 ABCDFGHIJ 1234', makeModel:'Genie Z45', year:'2021' } },
       { id:'APV-2', name:'Aerial Platform Vehicle – 11 Mtr', info:{ regNo:'UP32 CD 5678', makeModel:'JLG 450AJ', year:'2021' } }
     ];
-
     if (!Array.isArray(state.vehicleRecords)) state.vehicleRecords = [];
+    if (!Array.isArray(state.ladders)) state.ladders = [];
 
     state.vehicleRecords = defaultVehicles.map(def => {
       const existing = state.vehicleRecords.find(v => v.id === def.id) || {};
       return {
-        id: def.id,
-        name: def.name,
-        info: {
-          regNo: existing.info?.regNo || def.info.regNo,
-          makeModel: existing.info?.makeModel || def.info.makeModel,
-          year: existing.info?.year || def.info.year
-        },
+        id: def.id, name: def.name,
+        info: { regNo: existing.info?.regNo || def.info.regNo, makeModel: existing.info?.makeModel || def.info.makeModel, year: existing.info?.year || def.info.year },
         records: {
           insurance:      existing.records?.insurance      || { date:'', file:'' },
           fitness:        existing.records?.fitness        || { date:'', file:'' },
@@ -571,11 +1141,40 @@ async function loadFromSheet() {
 
     appReady = true;
     document.body.classList.add('app-ready');
+    const ts = document.getElementById('syncTimestamp');
+    if (ts) ts.textContent = new Date().toLocaleTimeString();
     document.dispatchEvent(new CustomEvent('statechange'));
   } catch (err) {
     console.error('Failed to load from Google Sheet:', err);
-    alert('Failed to load inventory from Google Sheet');
+    alert('Failed to load inventory from Google Sheet. Check console for details.');
   }
+}
+
+// JSONP loader — works from file:// origins where fetch is CORS-blocked
+function loadViaJSONP(url) {
+  return new Promise((resolve, reject) => {
+    const cbName = '__gsJSONP_' + Date.now();
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('JSONP timeout'));
+    }, 10000);
+
+    window[cbName] = function(data) {
+      cleanup();
+      resolve(data);
+    };
+
+    function cleanup() {
+      clearTimeout(timeout);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    script.src = url + '?callback=' + cbName + '&_t=' + Date.now();
+    script.onerror = () => { cleanup(); reject(new Error('JSONP script load failed')); };
+    document.head.appendChild(script);
+  });
 }
 </script>
 
@@ -624,12 +1223,15 @@ function doLogin() {
 loginInput.addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
 
 logoutBtn.onclick = () => {
+  // Save current state to localStorage before logout as a safety net
+  try { if(appReady) localStorage.setItem('emd_inventory_backup', JSON.stringify(state)); } catch(e) {}
   localStorage.removeItem("isAdmin");
   sheetLoaded = false;
   appReady = false;
   document.body.classList.remove('app-ready');
   state = {
     categories: ['A','B'], items: [],
+    ladders: [],
     vehicleRecords: [
       { id:'APV-1', name:'Aerial Platform Vehicle – 1',
         info:{ regNo:'UP32 ABCDFGHIJ 1234', makeModel:'Genie Z45', year:'2021' },
@@ -682,6 +1284,8 @@ function clearUndo(){ if(undoTimer) clearTimeout(undoTimer); undoTimer=null; cur
 
 function persist(fn) {
   state = fn(JSON.parse(JSON.stringify(state)));
+  // Always back up to localStorage so data survives re-login even if sheet save fails
+  try { localStorage.setItem('emd_inventory_backup', JSON.stringify(state)); } catch(e) {}
   if(appReady) saveToSheet(state);
   else console.warn('⏸️ Persist skipped — app not ready');
   try { document.dispatchEvent(new CustomEvent('statechange')); } catch(e){}
@@ -894,6 +1498,7 @@ if(!window.__statechange_attached){
       else if(h.startsWith('/sync'))      renderSync();
       else if(h.startsWith('/activities')) renderAllActivities();
       else if(h.startsWith('/vehicles'))   renderVehicleRecords();
+      else if(h.startsWith('/ladders'))     renderLadderInspection();
       else renderHome();
     } catch(e){ console.warn('Render skipped (functions not ready yet)'); }
     updateNavActive();
@@ -910,6 +1515,7 @@ function routeRender(){
   else if(h.startsWith('/sync'))       renderSync();
   else if(h.startsWith('/activities')) renderAllActivities();
   else if(h.startsWith('/vehicles'))   renderVehicleRecords();
+  else if(h.startsWith('/ladders'))     renderLadderInspection();
   else renderHome();
 }
 </script>
@@ -957,15 +1563,114 @@ function clear(elm){ while(elm.firstChild) elm.removeChild(elm.firstChild); }
 /* ---- SYNC / EXPORT ---- */
 function renderSync(){
   clear(app);
+
+  const statusDiv = el('div', { id:'sync-status-box', class:'text-sm text-slate-500 mt-2' }, '');
+
+  async function doForceSave() {
+    statusDiv.textContent = '⏳ Saving to Google Sheet…';
+    statusDiv.style.color = '#92400e';
+    try {
+      const fd = new FormData();
+      fd.append('data', JSON.stringify(state));
+
+      let ok = false;
+      try {
+        const res = await fetch(API_URL, { method: 'POST', body: fd });
+        ok = res.ok || res.status === 0;
+      } catch(_) {}
+
+      if (!ok) {
+        // Fallback no-cors
+        const fd2 = new FormData();
+        fd2.append('data', JSON.stringify(state));
+        await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: fd2 });
+      }
+
+      statusDiv.textContent = `✅ Saved at ${new Date().toLocaleTimeString()} — ${state.items.length} items`;
+      statusDiv.style.color = '#15803d';
+    } catch(err) {
+      statusDiv.textContent = '❌ Save failed: ' + err.message;
+      statusDiv.style.color = '#dc2626';
+      console.error(err);
+    }
+  }
+
+  async function doForceReload() {
+    statusDiv.textContent = '⏳ Reloading from Google Sheet…';
+    statusDiv.style.color = '#1d4ed8';
+    try {
+      const res = await fetch(API_URL + '?_t=' + Date.now());
+      const data = await res.json();
+      if (!data || !Array.isArray(data.items)) throw new Error('Invalid data returned');
+      state = data;
+      if (!Array.isArray(state.vehicleRecords)) state.vehicleRecords = [];
+      if (!Array.isArray(state.ladders)) state.ladders = [];
+      if (!state.categories.includes('A')) state.categories.push('A');
+      if (!state.categories.includes('B')) state.categories.push('B');
+      statusDiv.textContent = `✅ Reloaded at ${new Date().toLocaleTimeString()} — ${state.items.length} items`;
+      statusDiv.style.color = '#15803d';
+      document.dispatchEvent(new CustomEvent('statechange'));
+    } catch(err) {
+      statusDiv.textContent = '❌ Reload failed: ' + err.message;
+      statusDiv.style.color = '#dc2626';
+      console.error(err);
+    }
+  }
+
   app.appendChild(
-    el('div',{class:'bg-white p-6 rounded-xl shadow grid grid-cols-1 md:grid-cols-2 gap-6 items-center'},[
-      el('div',{class:'flex justify-center'},[
-        el('img',{src:'export-illustration.png',alt:'Export illustration',class:'max-w-full h-auto rounded'})
+    el('div', { class:'space-y-4' }, [
+
+      // Export card
+      el('div', { class:'bg-white p-6 rounded-xl shadow grid grid-cols-1 md:grid-cols-2 gap-6 items-center' }, [
+        el('div', { class:'flex justify-center' }, [
+          el('div', { html:`
+            <svg viewBox="0 0 320 260" xmlns="http://www.w3.org/2000/svg" style="max-width:260px;width:100%;height:auto">
+              <circle cx="160" cy="130" r="110" fill="#e0f2fe" opacity=".5"/>
+              <rect x="60" y="60" width="200" height="150" rx="14" fill="#fff" stroke="#e2e8f0" stroke-width="2"/>
+              <rect x="60" y="60" width="200" height="38" rx="14" fill="#0ea5e9" opacity=".15"/>
+              <rect x="60" y="84" width="200" height="14" fill="#0ea5e9" opacity=".1"/>
+              <rect x="80" y="115" width="160" height="8" rx="4" fill="#e2e8f0"/>
+              <rect x="80" y="131" width="120" height="8" rx="4" fill="#e2e8f0"/>
+              <rect x="80" y="147" width="140" height="8" rx="4" fill="#e2e8f0"/>
+              <rect x="80" y="163" width="90" height="8" rx="4" fill="#e2e8f0"/>
+              <circle cx="220" cy="195" r="28" fill="#0ea5e9"/>
+              <polyline points="220,183 220,202" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+              <polyline points="212,196 220,205 228,196" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="212" y="206" width="16" height="3" rx="1.5" fill="#fff"/>
+            </svg>
+          ` })
+        ]),
+        el('div', { class:'space-y-4' }, [
+          el('h2', { class:'text-xl font-semibold' }, 'Export Data'),
+          el('p', { class:'text-sm text-slate-500' }, 'Export all items with consumption history to Excel'),
+          el('button', { class:'px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm font-semibold btn-export', onclick: exportExcel }, 'Export Excel ↓')
+        ])
       ]),
-      el('div',{class:'space-y-4'},[
-        el('h2',{class:'text-xl font-semibold'},'Export Data'),
-        el('p',{class:'text-sm text-slate-600'},'Export all items data with consumption history'),
-        el('button',{class:'px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded shadow-sm font-semibold btn-export',onclick:exportExcel},'Export Excel ↓')
+
+      // Sync card
+      el('div', { class:'bg-white p-6 rounded-xl shadow' }, [
+        el('h2', { class:'section-heading text-lg font-semibold mb-1' }, 'Google Sheet Sync'),
+        el('p', { class:'text-sm text-slate-500 mb-4' }, 'Force-save current state to Google Sheet, or reload from it. Use these if data seems out of sync.' ),
+        el('div', { class:'flex flex-wrap gap-3 items-center' }, [
+          el('button', {
+            class: 'px-4 py-2 text-white rounded-lg font-semibold text-sm',
+            style: 'background:#0ea5e9',
+            onclick: doForceSave
+          }, '☁️ Force Save to Sheet'),
+          el('button', {
+            class: 'px-4 py-2 rounded-lg font-semibold text-sm border border-slate-200 bg-slate-50 text-slate-700',
+            onclick: doForceReload
+          }, '🔄 Force Reload from Sheet'),
+          statusDiv
+        ]),
+        el('div', { class:'mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800' }, [
+          el('div', { class:'font-semibold mb-1' }, '💡 If data disappears after re-login:'),
+          el('ul', { class:'list-disc ml-4 space-y-1' }, [
+            el('li', {}, 'After adding items, wait for the "✅ Saved" indicator (bottom-right) before logging out'),
+            el('li', {}, 'Click "Force Save to Sheet" here to manually push all current data'),
+            el('li', {}, 'Open browser console (F12) to see detailed save/load logs'),
+          ])
+        ])
       ])
     ])
   );
@@ -975,37 +1680,34 @@ function renderSync(){
 function renderHome(){
   clear(app);
 
-  // Metric cards
   app.appendChild(renderMetricCards());
 
   const overview=el('section',{class:'bg-white p-6 rounded-xl shadow no-pop'},[
-    el('h2',{class:'text-lg font-semibold mb-5'},'Overview'),
-    el('div',{class:'flex flex-col lg:flex-row items-center justify-between gap-10'},[
-      el('div',{class:'flex-1 flex justify-center'},renderCategoryPie())
-    ])
+    el('h2',{class:'section-heading text-lg font-semibold mb-5'},'Overview'),
+    renderCategoryPie()
   ]);
 
   const itemsSection=currentPieFilter?el('section',{class:'bg-white p-4 rounded-xl shadow mt-4'},[
-    el('h2',{class:'text-lg font-semibold mb-2'},`Items (qty) — ${currentPieFilter}`),
+    el('h2',{class:'section-heading text-lg font-semibold mb-2'},`Items (qty) — ${currentPieFilter}`),
     renderItemsBar()
   ]):null;
 
   const quickA=el('section',{class:'bg-white p-4 rounded-xl shadow mt-4'},[
-    el('h2',{class:'text-lg font-semibold mb-2'},'Quick Entry — Lighting'),
+    el('h2',{class:'section-heading text-lg font-semibold mb-2'},'Quick Entry — 💡 Lighting'),
     renderQuickForCategory('A')
   ]);
   const quickB=el('section',{class:'bg-white p-4 rounded-xl shadow mt-4'},[
-    el('h2',{class:'text-lg font-semibold mb-2'},'Quick Entry — Cabling'),
+    el('h2',{class:'section-heading text-lg font-semibold mb-2'},'Quick Entry — 🔌 Cabling'),
     renderQuickForCategory('B')
   ]);
 
   const recent=el('section',{class:'bg-white p-4 rounded-xl shadow no-pop mt-4'},[
-    el('h2',{class:'text-lg font-semibold mb-2'},'Recent Activity'),
+    el('h2',{class:'section-heading text-lg font-semibold mb-2'},'Recent Activity'),
     renderRecentActivity(recentLimit),
     (function(){
       const totalEntries=state.items.flatMap(i=>(i.history||[])).length;
       if(totalEntries<=10) return el('div',{class:'text-sm text-slate-500 mt-2'},`Total entries: ${totalEntries}`);
-      const btn=el('button',{class:'px-3 py-1 mt-3 bg-sky-600 text-white rounded'},totalEntries>recentLimit?'Load more':'Show less');
+      const btn=el('button',{class:'px-3 py-1 mt-3 text-white rounded-lg',style:'background:var(--brand-teal)'},totalEntries>recentLimit?'Load more':'Show less');
       btn.addEventListener('click',()=>{
         if(totalEntries>recentLimit) recentLimit=Math.min(totalEntries,recentLimit+10);
         else recentLimit=10;
@@ -1025,6 +1727,12 @@ function renderHome(){
 
 /* ---- PIE CHART ---- */
 function renderCategoryPie(){
+  // Category A = light amber/yellow palette, Category B = light indigo/violet palette
+  const palettes = {
+    A: ['#fcd34d','#fde68a','#fbbf24','#f59e0b','#fef3c7','#fef9c3'],
+    B: ['#a5b4fc','#c7d2fe','#818cf8','#6366f1','#ddd6fe','#ede9fe'],
+  };
+
   function buildDataForMain(main){
     const prefix=main+' /'; const buckets=new Map();
     (state.categories||[]).forEach(c=>{ if(c.startsWith(prefix)) buckets.set(c,0); });
@@ -1035,25 +1743,29 @@ function renderCategoryPie(){
   function renderSinglePie(main){
     const entries=buildDataForMain(main);
     const total=entries.reduce((s,e)=>s+e.value,0)||1;
-    const size=240; const cx=size/2,cy=size/2,r=size*0.35;
-    const svg=el('svg',{width:size,height:size,viewBox:`0 0 ${size} ${size}`});
-    let acc=0; const colors=['#60a5fa','#34d399','#facc15','#fb7185','#a78bfa','#fb923c'];
+    const size=220; const cx=size/2,cy=size/2,r=size*0.36;
+    const colors = palettes[main] || palettes.A;
+    const catLabel = main === 'A' ? '💡 Lighting' : '🔌 Cabling';
+    const catClass = main === 'A' ? 'cat-a' : 'cat-b';
+
+    const svg=el('svg',{width:size,height:size,viewBox:`0 0 ${size} ${size}`,class:'pie-svg'});
+    let acc=0;
+
     function polar(a){ const rad=(a-90)*Math.PI/180; return {x:cx+r*Math.cos(rad),y:cy+r*Math.sin(rad)}; }
     function arc(start,end){ const s=polar(end),e=polar(start),large=(end-start)<=180?0:1; return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 0 ${e.x} ${e.y} L ${cx} ${cy} Z`; }
 
     if(entries.length===0){
-      svg.appendChild(el('circle',{cx,cy,r,fill:'#f1f5f9'}));
-      svg.appendChild(el('text',{x:cx,y:cy,'text-anchor':'middle','font-size':'12',fill:'#64748b'},'No data'));
+      svg.appendChild(el('circle',{cx,cy,r,fill:'#f1f5f9',stroke:'#e2e8f0','stroke-width':'1'}));
+      svg.appendChild(el('text',{x:cx,y:cy-6,'text-anchor':'middle','font-size':'11','font-family':'Inter,sans-serif',fill:'#94a3b8'},'No data yet'));
+      svg.appendChild(el('text',{x:cx,y:cy+10,'text-anchor':'middle','font-size':'9','font-family':'Inter,sans-serif',fill:'#cbd5e1'},'Add items to see chart'));
     } else {
       const animPaths=[];
       entries.forEach((en,i)=>{
         const start=(acc/total)*360; acc+=en.value; const end=(acc/total)*360;
-        const path=el('path',{d:arc(start,end),fill:colors[i%colors.length],stroke:'#fff','stroke-width':2,style:'cursor:pointer'});
-        // Hover effects
-        path.addEventListener('pointerenter',()=>{ path.setAttribute('opacity','0.82'); path.setAttribute('stroke-width','3'); });
-        path.addEventListener('pointerleave',()=>{ path.setAttribute('opacity','1');    path.setAttribute('stroke-width','2'); });
+        const path=el('path',{d:arc(start,end),fill:colors[i%colors.length],stroke:'#fff','stroke-width':'2.5',style:'cursor:pointer'});
+        path.addEventListener('pointerenter',()=>{ path.setAttribute('opacity','0.82'); path.setAttribute('stroke-width','3.5'); });
+        path.addEventListener('pointerleave',()=>{ path.setAttribute('opacity','1');    path.setAttribute('stroke-width','2.5'); });
         path.addEventListener('click',()=>{ currentPieFilter=(currentPieFilter===en.name)?null:en.name; routeRender(); });
-        // Pop-in animation
         path.style.transformOrigin=`${cx}px ${cy}px`;
         path.style.transform='scale(0.05)';
         path.style.opacity='0';
@@ -1067,32 +1779,41 @@ function renderCategoryPie(){
         });
       });
     }
-    svg.appendChild(el('circle',{cx,cy,r:r*0.5,fill:'#fff'}));
-    svg.appendChild(el('text',{x:cx,y:cy-6,'text-anchor':'middle','font-size':'12','font-weight':'600'},main));
-    svg.appendChild(el('text',{x:cx,y:cy+12,'text-anchor':'middle','font-size':'10',fill:'#475569'},`${entries.reduce((s,e)=>s+e.value,0)} qty`));
-    svg.classList.add('mx-auto');
+    // Donut hole
+    svg.appendChild(el('circle',{cx,cy,r:r*0.52,fill:'#fff'}));
+    svg.appendChild(el('text',{x:cx,y:cy-7,'text-anchor':'middle','font-size':'13','font-weight':'700','font-family':'DM Sans,sans-serif',fill:'#1e293b'},main));
+    svg.appendChild(el('text',{x:cx,y:cy+10,'text-anchor':'middle','font-size':'10','font-family':'Inter,sans-serif',fill:'#64748b'},`${entries.reduce((s,e)=>s+e.value,0)} qty`));
 
-    const legend=el('div',{class:'flex flex-col gap-1'});
+    // Legend
+    const legend=el('div',{class:'flex flex-col gap-0.5 min-w-0'});
     entries.forEach((en,i)=>{
       const label=en.name===main?main:en.name.replace(main+' / ','');
-      const row=el('div',{class:'flex items-center gap-1 whitespace-nowrap cursor-pointer rounded px-1 py-0.5 transition-colors hover:bg-slate-50'},[
-        el('div',{class:'w-3 h-3 rounded',style:`background:${colors[i%colors.length]}`},''),
-        el('div',{class:'text-sm'},label),
-        el('div',{class:'text-xs text-slate-500 ml-2'},`${en.value}`)
+      const pct = Math.round((en.value/total)*100);
+      const row=el('div',{class:'pie-legend-row'},[
+        el('div',{class:'pie-legend-dot',style:`background:${colors[i%colors.length]}`}),
+        el('div',{style:'font-size:12px;color:#334155;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis'},label),
+        el('div',{class:'pie-legend-qty'},`${en.value}`)
       ]);
       row.addEventListener('click',()=>{ currentPieFilter=(currentPieFilter===en.name)?null:en.name; routeRender(); });
       legend.appendChild(row);
     });
-    const box=el('div',{class:'flex items-start gap-0'},[el('div',{class:'p-0 bg-white rounded shadow'},svg),legend]);
-    return box;
+
+    const card = el('div', { class: 'pie-card' }, [
+      el('div', { class: `pie-card-title ${catClass}` }, catLabel),
+      el('div', { class: 'flex items-start gap-3' }, [svg, legend])
+    ]);
+    return card;
   }
 
-  const piesContainer=el('div',{class:'grid grid-cols-1 xl:grid-cols-2 gap-10 w-full'},[
-    el('div',{class:'flex justify-start pl-6'},renderSinglePie('A')),
-    el('div',{class:'flex justify-start pl-6'},renderSinglePie('B'))
+  const piesContainer=el('div',{class:'grid grid-cols-1 xl:grid-cols-2 gap-5 w-full'},[
+    renderSinglePie('A'),
+    renderSinglePie('B')
   ]);
-  const clearBtn=currentPieFilter?el('div',{class:'flex items-start md:items-center'},el('button',{class:'px-3 py-1 text-sm border rounded-lg',onclick:()=>{ currentPieFilter=null; routeRender(); }},'Clear filter')):null;
-  return el('div',{class:'flex flex-col md:flex-row md:items-start md:justify-between gap-4'},[piesContainer,clearBtn]);
+  const clearBtn=currentPieFilter?el('div',{class:'mt-4'},el('button',{class:'px-3 py-1 text-sm border rounded-lg',onclick:()=>{ currentPieFilter=null; routeRender(); }},'✕ Clear filter')):null;
+  const wrap = el('div', {});
+  wrap.appendChild(piesContainer);
+  if (clearBtn) wrap.appendChild(clearBtn);
+  return wrap;
 }
 
 /* ---- ITEMS BAR ---- */
@@ -1285,8 +2006,8 @@ function renderCategory(name){
       const tbody=el('tbody',{});
       items.forEach(it=>{
         const actions=el('div',{class:'flex items-center justify-center gap-2'});
-        actions.appendChild(el('button',{class:'px-2 py-1 border rounded-lg text-sm',onclick:()=>openHistory(it.id)},'History'));
-        actions.appendChild(el('button',{class:'px-2 py-1 border rounded-lg text-sm',onclick:()=>openEditItem(it)},'Edit'));
+        actions.appendChild(el('button',{class:'tbl-btn',onclick:()=>openHistory(it.id)},'📋 History'));
+        actions.appendChild(el('button',{class:'tbl-btn',onclick:()=>openEditItem(it)},'✏️ Edit'));
         tbody.appendChild(el('tr',{class:'border-b anim-row-in'},[
           el('td',{class:'py-2'},it.name), el('td',{class:'py-2 text-center'},it.location||''),
           el('td',{class:'py-2 text-center'},String(it.qty)), el('td',{class:'py-2 text-center'},it.unit),
@@ -1499,20 +2220,34 @@ function renderCategories(){
 /* ---- VEHICLE RECORDS ---- */
 function renderVehicleRecords(){
   clear(app);
-  app.appendChild(el('h2',{class:'text-2xl font-semibold mb-6'},'Aerial Platform Vehicle Records'));
+  const titleRow = el('div',{class:'flex items-center gap-3 mb-6'},[
+    el('div',{style:'font-size:24px'},'🚗'),
+    el('h2',{class:'text-2xl font-bold',style:'font-family:\'DM Sans\',sans-serif;color:#1e293b;letter-spacing:-.4px'},'Aerial Platform Vehicle Records')
+  ]);
+  app.appendChild(titleRow);
   const grid=el('div',{class:'grid grid-cols-1 lg:grid-cols-2 gap-6'});
   state.vehicleRecords.forEach(vehicle=>{
-    const card=el('div',{class:'bg-white p-4 rounded-xl shadow category-box'},[
-      el('div',{class:'mb-4'},[
-        el('h3',{class:'text-lg font-semibold'},vehicle.name),
-        el('div',{class:'text-sm text-slate-600 mt-1 space-y-1'},[
-          el('div',{},`Reg No: ${vehicle.info.regNo}`),
-          el('div',{},`Make / Model: ${vehicle.info.makeModel}`),
-          el('div',{},`Year: ${vehicle.info.year}`),
-          el('button',{class:'mt-2 px-2 py-1 bg-sky-600 text-white rounded-lg text-xs',onclick:()=>openVehicleInfoEditModal(vehicle.id)},'Edit Vehicle Info')
+    const card=el('div',{class:'vehicle-card'},[
+      // Dark gradient header
+      el('div',{class:'vehicle-card-header'},[
+        el('div',{class:'vehicle-icon'},'🏗️'),
+        el('div',{},[
+          el('div',{class:'vehicle-name'},vehicle.name),
+          el('div',{class:'vehicle-meta'},`${vehicle.info.makeModel} · ${vehicle.info.year}`),
         ])
       ]),
-      buildVehicleTable(vehicle)
+      // Body with info grid + table
+      el('div',{class:'vehicle-body'},[
+        el('div',{class:'vehicle-info-grid'},[
+          el('div',{class:'vehicle-info-item'},[el('label',{},'Reg No.'),el('span',{},vehicle.info.regNo)]),
+          el('div',{class:'vehicle-info-item'},[el('label',{},'Make / Model'),el('span',{},vehicle.info.makeModel)]),
+          el('div',{class:'vehicle-info-item'},[el('label',{},'Year'),el('span',{},vehicle.info.year)]),
+        ]),
+        el('div',{class:'flex justify-end mb-3'},[
+          el('button',{class:'tbl-btn tbl-btn-primary',onclick:()=>openVehicleInfoEditModal(vehicle.id)},'✏️ Edit Info')
+        ]),
+        buildVehicleTable(vehicle)
+      ])
     ]);
     grid.appendChild(card);
   });
@@ -1530,29 +2265,51 @@ function getExpiryStatus(dateStr){
 }
 
 function buildVehicleTable(vehicle){
-  const rows=[['Insurance','insurance'],['Fitness Certificate','fitness'],['PUC','puc'],
-              ['Last Vehicle Servicing','vehicleService'],['Last OEM Servicing','oemService'],['Road Tax','roadTax']];
-  const table=el('table',{class:'w-full text-sm border rounded-lg overflow-hidden'});
+  const rows=[
+    ['🛡️ Insurance','insurance'],
+    ['📋 Fitness Certificate','fitness'],
+    ['🌿 PUC','puc'],
+    ['🔧 Last Vehicle Service','vehicleService'],
+    ['⚙️ Last OEM Service','oemService'],
+    ['💰 Road Tax','roadTax']
+  ];
+  const table=el('table',{class:'vehicle-table'});
   table.appendChild(el('thead',{},el('tr',{},[
-    el('th',{class:'p-2 border text-left'},'Record'),
-    el('th',{class:'p-2 border text-center'},'Valid upto'),
-    el('th',{class:'p-2 border text-center'},'Document'),
-    el('th',{class:'p-2 border text-center'},'Action')
+    el('th',{class:'text-left'},'Record'),
+    el('th',{class:'text-left'},'Valid Until'),
+    el('th',{class:'text-center'},'Doc'),
+    el('th',{class:'text-center'},'Action')
   ])));
   const tbody=el('tbody',{});
   rows.forEach(([label,key])=>{
     const rec=vehicle.records[key];
     const status=getExpiryStatus(rec.date);
+
+    // Build expiry progress bar (fills based on days remaining out of 365)
+    let barPct = 0, barColor = '#e2e8f0';
+    if(rec.date){
+      const today=new Date(), expiry=new Date(rec.date+'T00:00:00');
+      const diffDays=Math.ceil((expiry-today)/(1000*60*60*24));
+      barPct = Math.max(0, Math.min(100, (diffDays/365)*100));
+      barColor = diffDays < 0 ? '#ef4444' : diffDays <= 30 ? '#f97316' : diffDays <= 60 ? '#eab308' : '#22c55e';
+    }
+
+    const expiryCell = el('td', {}, [
+      el('span',{class:`status-pill ${status.color}`}, rec.date ? `${rec.date}` : '—'),
+      rec.date ? el('div',{class:'text-xs mt-1',style:'color:#94a3b8'},status.label) : el('span',{},''),
+      rec.date ? el('div',{class:'expiry-bar-wrap'},[
+        el('div',{class:'expiry-bar-fill',style:`width:${barPct}%;background:${barColor}`})
+      ]) : el('span',{})
+    ]);
+
     tbody.appendChild(el('tr',{class:'anim-row-in'},[
-      el('td',{class:'p-2 border font-medium'},label),
-      el('td',{class:'p-2 border text-center'},
-        el('span',{class:`status-pill ${status.color}`}, rec.date ? `${rec.date}  ${status.label}` : '—')
-      ),
-      el('td',{class:'p-2 border text-center'}, rec.file
-        ? el('a',{href:rec.file,target:'_blank',class:'text-sky-600 underline'},'View')
-        : '—'),
-      el('td',{class:'p-2 border text-center'},
-        el('button',{class:'px-2 py-1 bg-sky-600 text-white rounded-lg text-xs',onclick:()=>openVehicleEditModal(vehicle.id,key)},'Update'))
+      el('td',{style:'font-weight:600;font-size:12.5px'},label),
+      expiryCell,
+      el('td',{class:'text-center'}, rec.file
+        ? el('a',{href:rec.file,target:'_blank',class:'tbl-btn',style:'font-size:11px'},'📄 View')
+        : el('span',{style:'color:#cbd5e1;font-size:12px'},'—')),
+      el('td',{class:'text-center'},
+        el('button',{class:'tbl-btn tbl-btn-primary',onclick:()=>openVehicleEditModal(vehicle.id,key)},'Update'))
     ]));
   });
   table.appendChild(tbody);
@@ -1572,15 +2329,17 @@ function openVehicleEditModal(vehicleId,recordKey){
         const reader=new FileReader();
         reader.onload=async function(event){
           const base64=event.target.result.split(',')[1];
-          const formData=new URLSearchParams();
           const fileName=`${vehicleId}_${recordKey}_${Date.now()}_${file.name}`;
-          formData.append('file',base64); formData.append('name',fileName); formData.append('type',file.type);
+          const formData=new FormData();
+          formData.append('file',base64);
+          formData.append('name',fileName);
+          formData.append('type',file.type);
           try {
             const res=await fetch(API_URL,{method:'POST',body:formData});
             const result=await res.json();
             if(result.url){ rec.file=result.url; alert('Upload successful'); }
-            else alert('Upload failed');
-          } catch(err){ console.error(err); alert('Upload error'); }
+            else alert('Upload failed: '+(result.error||'unknown'));
+          } catch(err){ console.error(err); alert('Upload error: '+err.message); }
         };
         reader.readAsDataURL(file);
       }}),
@@ -1630,10 +2389,622 @@ function showAnimatedModal(modal){
 </script>
 
 <script>
-window.addEventListener('load',()=>{
+/* ================= LADDER INSPECTION ================= */
+
+const CHECKLIST_ITEMS = [
+  'Visible damage to the ladder',
+  'Ladder has missing components or loose parts',
+  'Steps/rungs are all available & are secure to the side rails',
+  'Steps/Rungs not bent, dented, cracked or deformed',
+  'All hardware and fittings are available & securely attached',
+  'Test movable parts to see that they operate without binding or without too much free play',
+  'All labels are intact and readable',
+  'Ladders are free of oil, grease, or slippery materials',
+  'Accessories (levelers, platforms, etc.) are in good condition',
+  'Ladder legs have slip resistant feet',
+  'All ladder legs are of the same length',
+  'Extensions ladders: Ropes and pulleys are in good condition',
+  'Extensions ladders: extension locks move freely and lock correctly',
+  'Extension ladders: top section has rung locks to ensure the top section will not fall',
+  'Step-ladders/Self-supporting Ladders: spreaders are intact and lock correctly',
+  'Ladder to be scrapped/removed from service',
+];
+
+function renderLadderInspection() {
+  clear(app);
+
+  const cont = el('div', {});
+
+  // Header
+  cont.appendChild(el('div', { class: 'flex items-center justify-between mb-4' }, [
+    el('h2', { class: 'text-2xl font-semibold' }, 'Ladder Records'),
+    el('button', {
+      class: 'px-4 py-2 bg-green-600 text-white rounded-lg font-semibold',
+      onclick: () => openAddLadderModal()
+    }, '+ Add Ladder')
+  ]));
+
+  if (!Array.isArray(state.ladders) || state.ladders.length === 0) {
+    cont.appendChild(el('div', { class: 'bg-white rounded-xl shadow p-10 text-center text-slate-400 text-sm' },
+      'No ladders registered yet. Click "+ Add Ladder" to begin.'));
+    app.appendChild(cont);
+    return;
+  }
+
+  // Ladder table
+  const tableWrap = el('div', { class: 'bg-white rounded-xl shadow overflow-hidden' });
+  const table = el('table', { class: 'w-full text-sm' });
+  table.appendChild(el('thead', { class: 'bg-slate-50 border-b' }, el('tr', {}, [
+    el('th', { class: 'p-3 text-left font-semibold' }, 'Ladder No.'),
+    el('th', { class: 'p-3 text-left font-semibold' }, 'Description'),
+    el('th', { class: 'p-3 text-left font-semibold' }, 'Make'),
+    el('th', { class: 'p-3 text-left font-semibold' }, 'PO No.'),
+    el('th', { class: 'p-3 text-left font-semibold' }, 'Purchased On'),
+    el('th', { class: 'p-3 text-center font-semibold' }, 'Inspections'),
+    el('th', { class: 'p-3 text-center font-semibold' }, 'Actions'),
+  ])));
+  const tbody = el('tbody', {});
+  (state.ladders || []).forEach(ladder => {
+    const inspCount = (ladder.inspections || []).length;
+    const tr = el('tr', { class: 'border-b anim-row-in' }, [
+      el('td', { class: 'p-3 font-medium text-sky-700' }, ladder.ladderNo || '—'),
+      el('td', { class: 'p-3' }, ladder.description || '—'),
+      el('td', { class: 'p-3' }, ladder.make || '—'),
+      el('td', { class: 'p-3' }, ladder.poNo || '—'),
+      el('td', { class: 'p-3' }, ladder.purchasedOn || '—'),
+      el('td', { class: 'p-3 text-center' },
+        el('span', { class: 'status-pill status-ok' }, `${inspCount} record${inspCount !== 1 ? 's' : ''}`)
+      ),
+      el('td', { class: 'p-3' }, (() => {
+        const wrap = el('div', { class: 'flex items-center justify-center gap-2' });
+        wrap.appendChild(el('button', {
+          class: 'px-2 py-1 bg-sky-600 text-white rounded-lg text-xs',
+          onclick: () => openInspectionModal(ladder.id)
+        }, '+ Inspect'));
+        wrap.appendChild(el('button', {
+          class: 'px-2 py-1 border rounded-lg text-xs',
+          onclick: () => openPastInspections(ladder.id)
+        }, 'History'));
+        wrap.appendChild(el('button', {
+          class: 'px-2 py-1 border border-red-300 text-red-600 rounded-lg text-xs',
+          onclick: () => {
+            if (confirm(`Delete ladder "${ladder.ladderNo}"? This will also delete all its inspection records.`)) {
+              persist(d => ({ ...d, ladders: (d.ladders || []).filter(l => l.id !== ladder.id) }));
+            }
+          }
+        }, 'Delete'));
+        return wrap;
+      })())
+    ]);
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  tableWrap.appendChild(table);
+  cont.appendChild(tableWrap);
+  app.appendChild(cont);
+  renderUndo();
+}
+
+/* ---- ADD LADDER MODAL ---- */
+function openAddLadderModal() {
+  const modal = el('div', { class: 'fixed inset-0 bg-black/40 flex items-center justify-center z-50' },
+    el('div', { class: 'bg-white p-6 rounded-xl w-[480px] shadow-xl' }, [
+      el('h3', { class: 'text-lg font-semibold mb-4' }, 'Register New Ladder'),
+      el('div', { class: 'space-y-3' }, [
+        el('div', {}, [el('label', { class: 'text-sm font-medium block mb-1' }, 'Ladder Number *'), el('input', { id: 'ldr-no', class: 'w-full p-2 border rounded-lg', placeholder: 'e.g. LDR-001' })]),
+        el('div', {}, [el('label', { class: 'text-sm font-medium block mb-1' }, 'Description'), el('input', { id: 'ldr-desc', class: 'w-full p-2 border rounded-lg', placeholder: 'e.g. Aluminium Extension Ladder 6m' })]),
+        el('div', {}, [el('label', { class: 'text-sm font-medium block mb-1' }, 'Make / Brand'), el('input', { id: 'ldr-make', class: 'w-full p-2 border rounded-lg', placeholder: 'e.g. Gorilla' })]),
+        el('div', {}, [el('label', { class: 'text-sm font-medium block mb-1' }, 'PO Number'), el('input', { id: 'ldr-po', class: 'w-full p-2 border rounded-lg', placeholder: 'Purchase order no.' })]),
+        el('div', {}, [el('label', { class: 'text-sm font-medium block mb-1' }, 'Purchased On'), el('input', { type: 'date', id: 'ldr-date', class: 'w-full p-2 border rounded-lg' })]),
+      ]),
+      el('div', { class: 'flex justify-end gap-3 mt-5' }, [
+        el('button', { class: 'px-4 py-2 border rounded-lg', onclick: () => modal.remove() }, 'Cancel'),
+        el('button', {
+          class: 'px-4 py-2 bg-green-600 text-white rounded-lg font-semibold',
+          onclick: () => {
+            const ladderNo = modal.querySelector('#ldr-no').value.trim();
+            if (!ladderNo) { alert('Ladder Number is required'); return; }
+            const newLadder = {
+              id: uid(),
+              ladderNo,
+              description: modal.querySelector('#ldr-desc').value.trim(),
+              make: modal.querySelector('#ldr-make').value.trim(),
+              poNo: modal.querySelector('#ldr-po').value.trim(),
+              purchasedOn: modal.querySelector('#ldr-date').value,
+              inspections: []
+            };
+            persist(d => ({ ...d, ladders: [...(d.ladders || []), newLadder] }));
+            modal.remove();
+          }
+        }, 'Register Ladder')
+      ])
+    ])
+  );
+  showAnimatedModal(modal);
+}
+
+/* ---- QUARTERLY INSPECTION MODAL ---- */
+function openInspectionModal(ladderId) {
+  const ladder = (state.ladders || []).find(l => l.id === ladderId);
+  if (!ladder) return;
+
+  let ladderPhotoBase64 = '';
+  let signatureBase64 = '';
+  let inspectorSignBase64 = '';
+
+  // Build checklist rows
+  const checklistRows = CHECKLIST_ITEMS.map((desc, i) => {
+    const rowId = `chk-${i}`;
+    const row = el('tr', { class: 'border-b' }, [
+      el('td', { class: 'p-2 font-semibold text-center w-8' }, String(i + 1)),
+      el('td', { class: 'p-2 text-sm leading-snug' }, desc),
+      el('td', { class: 'p-2 text-center w-20' }, (() => {
+        const wrap = el('div', { class: 'flex gap-2 justify-center' });
+        const yes = el('label', { class: 'flex items-center gap-1 cursor-pointer text-xs font-medium text-green-700' }, [
+          el('input', { type: 'radio', name: rowId, value: 'Yes', class: 'accent-green-600' }), 'Yes'
+        ]);
+        const no = el('label', { class: 'flex items-center gap-1 cursor-pointer text-xs font-medium text-red-600' }, [
+          el('input', { type: 'radio', name: rowId, value: 'No', class: 'accent-red-600' }), 'No'
+        ]);
+        const na = el('label', { class: 'flex items-center gap-1 cursor-pointer text-xs font-medium text-slate-400' }, [
+          el('input', { type: 'radio', name: rowId, value: 'N/A', class: 'accent-slate-400' }), 'N/A'
+        ]);
+        wrap.appendChild(yes); wrap.appendChild(no); wrap.appendChild(na); return wrap;
+      })()),
+      el('td', { class: 'p-2' }, el('input', { class: 'w-full text-xs border rounded px-2 py-1', placeholder: 'Remarks', id: `rem-${i}` }))
+    ]);
+    return row;
+  });
+
+  const checklistTbody = el('tbody', {});
+  checklistRows.forEach(r => checklistTbody.appendChild(r));
+
+  const content = el('div', { class: 'bg-white rounded-xl w-[800px] max-h-[92vh] flex flex-col shadow-2xl' }, [
+    // Header
+    el('div', { class: 'p-5 border-b flex items-center justify-between' }, [
+      el('div', {}, [
+        el('div', { class: 'text-xs text-slate-500 uppercase tracking-wider' }, 'Periodic Ladders Integrity Checklist'),
+        el('h3', { class: 'text-lg font-bold mt-0.5' }, `Inspection — ${ladder.ladderNo}`),
+      ]),
+      el('button', { class: 'text-slate-400 hover:text-slate-700 text-xl font-bold', onclick: () => modal.remove() }, '✕')
+    ]),
+
+    // Scrollable body
+    el('div', { class: 'overflow-y-auto flex-1 p-5 space-y-5' }, [
+
+      // Pre-filled ladder details
+      el('div', { class: 'grid grid-cols-3 gap-3 bg-slate-50 rounded-xl p-4 text-sm' }, [
+        el('div', {}, [el('div', { class: 'text-xs text-slate-400 uppercase tracking-wide' }, 'Ladder No.'), el('div', { class: 'font-semibold mt-0.5' }, ladder.ladderNo)]),
+        el('div', {}, [el('div', { class: 'text-xs text-slate-400 uppercase tracking-wide' }, 'Make'), el('div', { class: 'font-semibold mt-0.5' }, ladder.make || '—')]),
+        el('div', {}, [el('div', { class: 'text-xs text-slate-400 uppercase tracking-wide' }, 'Description'), el('div', { class: 'font-semibold mt-0.5' }, ladder.description || '—')]),
+        el('div', {}, [el('div', { class: 'text-xs text-slate-400 uppercase tracking-wide' }, 'PO No.'), el('div', { class: 'font-semibold mt-0.5' }, ladder.poNo || '—')]),
+        el('div', {}, [el('div', { class: 'text-xs text-slate-400 uppercase tracking-wide' }, 'Purchased On'), el('div', { class: 'font-semibold mt-0.5' }, ladder.purchasedOn || '—')]),
+      ]),
+
+      // Inspection meta fields
+      el('div', { class: 'grid grid-cols-2 gap-3' }, [
+        el('div', {}, [el('label', { class: 'text-xs font-semibold text-slate-500 uppercase' }, 'Inspection Date *'), el('input', { type: 'date', id: 'insp-date', class: 'w-full mt-1 p-2 border rounded-lg text-sm' })]),
+        el('div', {}, [el('label', { class: 'text-xs font-semibold text-slate-500 uppercase' }, 'Department / Section'), el('input', { id: 'insp-dept', class: 'w-full mt-1 p-2 border rounded-lg text-sm', placeholder: 'e.g. Electrical Maintenance' })]),
+        el('div', {}, [el('label', { class: 'text-xs font-semibold text-slate-500 uppercase' }, 'Area'), el('input', { id: 'insp-area', class: 'w-full mt-1 p-2 border rounded-lg text-sm', placeholder: 'Area / Location' })]),
+        el('div', {}, [el('label', { class: 'text-xs font-semibold text-slate-500 uppercase' }, 'Contractor / Agency'), el('input', { id: 'insp-contractor', class: 'w-full mt-1 p-2 border rounded-lg text-sm', placeholder: 'Contractor name' })]),
+      ]),
+
+      // Checklist
+      el('div', {}, [
+        el('div', { class: 'text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2' }, 'Inspection Checklist'),
+        el('div', { class: 'border rounded-xl overflow-hidden' },
+          el('table', { class: 'w-full text-sm' }, [
+            el('thead', { class: 'bg-slate-100' }, el('tr', {}, [
+              el('th', { class: 'p-2 w-8 text-center' }, '#'),
+              el('th', { class: 'p-2 text-left' }, 'Description'),
+              el('th', { class: 'p-2 w-36 text-center' }, 'Yes / No / N/A'),
+              el('th', { class: 'p-2 text-left' }, 'Remarks'),
+            ])),
+            checklistTbody
+          ])
+        )
+      ]),
+
+      // Observations
+      el('div', {}, [
+        el('label', { class: 'text-xs font-semibold text-slate-500 uppercase' }, 'Additional Observations (incl. positives & penal actions taken)'),
+        el('textarea', { id: 'insp-obs', class: 'w-full mt-1 p-2 border rounded-lg text-sm', rows: '3', placeholder: 'Enter additional observations...' })
+      ]),
+
+      // Corrective actions
+      el('div', {}, [
+        el('label', { class: 'text-xs font-semibold text-slate-500 uppercase' }, 'Corrective Actions Completed'),
+        el('textarea', { id: 'insp-corrective', class: 'w-full mt-1 p-2 border rounded-lg text-sm', rows: '2', placeholder: 'Describe corrective actions taken...' })
+      ]),
+
+      // Inspector & Contractor fields
+      el('div', { class: 'grid grid-cols-2 gap-4' }, [
+        el('div', {}, [
+          el('div', { class: 'text-xs font-semibold text-slate-500 uppercase mb-1' }, 'Inspected By (NTPC Area Engineer/EIC/HOS)'),
+          el('input', { id: 'insp-inspector', class: 'w-full p-2 border rounded-lg text-sm', placeholder: 'Name' }),
+        ]),
+        el('div', {}, [
+          el('div', { class: 'text-xs font-semibold text-slate-500 uppercase mb-1' }, 'Contractor (Name)'),
+          el('input', { id: 'insp-cname', class: 'w-full p-2 border rounded-lg text-sm', placeholder: 'Contractor name' }),
+        ]),
+      ]),
+
+      // Signature uploads
+      el('div', { class: 'grid grid-cols-2 gap-4' }, [
+        buildSignatureUpload('Inspector Signature', 'sig-inspector', img => inspectorSignBase64 = img),
+        buildSignatureUpload('Contractor Signature', 'sig-contractor', img => signatureBase64 = img),
+      ]),
+
+      // Ladder photo upload
+      el('div', { class: 'border-2 border-dashed border-slate-200 rounded-xl p-4 text-center' }, [
+        el('div', { class: 'text-xs font-semibold text-slate-500 uppercase mb-2' }, 'Picture of Ladder (Evidence of Check)'),
+        el('label', { class: 'cursor-pointer inline-flex flex-col items-center gap-2' }, [
+          el('div', { class: 'w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-2xl' }, '📷'),
+          el('div', { class: 'text-sm text-slate-600' }, 'Click to upload ladder photo'),
+          el('div', { class: 'text-xs text-slate-400' }, 'JPG, PNG — will appear on page 2 of PDF'),
+          (function () {
+            const inp = el('input', { type: 'file', accept: 'image/*', class: 'hidden', id: 'ladder-photo' });
+            const preview = el('img', { class: 'hidden mt-2 rounded-lg max-h-32 mx-auto', id: 'ladder-photo-preview' });
+            inp.addEventListener('change', e => {
+              const file = e.target.files[0]; if (!file) return;
+              const reader = new FileReader();
+              reader.onload = ev => {
+                ladderPhotoBase64 = ev.target.result;
+                preview.src = ladderPhotoBase64;
+                preview.classList.remove('hidden');
+              };
+              reader.readAsDataURL(file);
+            });
+            const wrap = el('div', {});
+            wrap.appendChild(inp);
+            wrap.appendChild(preview);
+            return wrap;
+          })()
+        ])
+      ]),
+
+    ]),
+
+    // Footer
+    el('div', { class: 'p-5 border-t flex items-center justify-between bg-slate-50 rounded-b-xl' }, [
+      el('div', { class: 'text-xs text-slate-400' }, 'LMI/FGUTPS/SAFETY/OD/OPS/SAFT/005/safety-16 · Rev. R1 June 2024'),
+      el('div', { class: 'flex gap-3' }, [
+        el('button', { class: 'px-4 py-2 border rounded-lg text-sm', onclick: () => modal.remove() }, 'Cancel'),
+        el('button', {
+          class: 'px-5 py-2 bg-sky-600 text-white rounded-lg font-semibold text-sm',
+          onclick: async () => {
+            const inspDate = document.getElementById('insp-date').value;
+            if (!inspDate) { alert('Please enter the inspection date'); return; }
+
+            // Collect checklist answers
+            const checklistData = CHECKLIST_ITEMS.map((desc, i) => {
+              const selected = document.querySelector(`input[name="chk-${i}"]:checked`);
+              const remark = document.getElementById(`rem-${i}`)?.value || '';
+              return { no: i + 1, description: desc, answer: selected ? selected.value : '—', remark };
+            });
+
+            const record = {
+              id: uid(),
+              date: inspDate,
+              department: document.getElementById('insp-dept').value,
+              area: document.getElementById('insp-area').value,
+              contractor: document.getElementById('insp-contractor').value,
+              inspector: document.getElementById('insp-inspector').value,
+              contractorName: document.getElementById('insp-cname').value,
+              observations: document.getElementById('insp-obs').value,
+              correctiveActions: document.getElementById('insp-corrective').value,
+              checklist: checklistData,
+              inspectorSignature: inspectorSignBase64,
+              contractorSignature: signatureBase64,
+              ladderPhoto: ladderPhotoBase64,
+              driveUrl: '',
+            };
+
+            modal.remove();
+
+            // Generate PDF, upload to Drive, then save record with URL
+            const statusToast = el('div', { id: 'drive-toast', class: 'fixed left-6 bottom-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl z-50 text-sm flex items-center gap-3' }, [
+              el('div', { class: 'w-4 h-4 border-2 border-white border-t-transparent rounded-full', style: 'animation:spinOnce 1s linear infinite' }),
+              'Generating PDF & uploading to Google Drive…'
+            ]);
+            document.body.appendChild(statusToast);
+
+            try {
+              const driveUrl = await generateAndUploadInspectionPDF(ladder, record);
+              record.driveUrl = driveUrl || '';
+            } catch (e) {
+              console.error('Drive upload failed:', e);
+              record.driveUrl = '';
+            }
+
+            statusToast.remove();
+
+            // Persist with driveUrl stored
+            persist(d => ({
+              ...d,
+              ladders: (d.ladders || []).map(l => l.id === ladderId
+                ? { ...l, inspections: [...(l.inspections || []), record] }
+                : l)
+            }));
+
+            if (record.driveUrl) {
+              const done = el('div', { class: 'fixed left-6 bottom-6 bg-emerald-700 text-white px-5 py-3 rounded-xl shadow-xl z-50 text-sm flex items-center gap-3' }, [
+                '✅ Inspection saved & PDF uploaded to Google Drive'
+              ]);
+              document.body.appendChild(done);
+              setTimeout(() => done.remove(), 4000);
+            }
+          }
+        }, 'Save & Generate PDF')
+      ])
+    ])
+  ]);
+
+  const modal = el('div', { class: 'fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4' }, content);
+  showAnimatedModal(modal);
+}
+
+function buildSignatureUpload(label, id, onLoad) {
+  const preview = el('img', { class: 'hidden mt-2 rounded-lg max-h-20 border', id: id + '-preview' });
+  const inp = el('input', { type: 'file', accept: 'image/*', class: 'hidden', id: id });
+  inp.addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      onLoad(ev.target.result);
+      preview.src = ev.target.result;
+      preview.classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+  });
+  return el('div', { class: 'border rounded-xl p-3' }, [
+    el('div', { class: 'text-xs font-semibold text-slate-500 uppercase mb-2' }, label),
+    el('label', { class: 'cursor-pointer flex items-center gap-2 text-sm text-sky-600 hover:underline' }, [
+      '🖊 Upload signature image', inp
+    ]),
+    preview
+  ]);
+}
+
+/* ---- GENERATE PDF & UPLOAD TO GOOGLE DRIVE ---- */
+async function generateAndUploadInspectionPDF(ladder, record) {
+  if (typeof window.jspdf === 'undefined') {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    document.head.appendChild(s);
+    await new Promise(res => s.onload = res);
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const W = 210, margin = 14;
+  let y = 14;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(0, 100, 200);
+  doc.text('Periodic Safety Assessments (Internal to Station)', W / 2, y, { align: 'center' });
+  y += 7;
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(13);
+  doc.text('PERIODIC LADDERS INTEGRITY CHECKLIST', W / 2, y, { align: 'center' });
+  y += 8;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  const metaLines = [
+    [`Department / Section: ${record.department || ''}`, `Area: ${record.area || ''}`, `Date: ${record.date}`],
+    [`Contractor / Agency: ${record.contractor || ''}`],
+    [`Ladder Number: ${ladder.ladderNo}   Make: ${ladder.make || ''}   PO No.: ${ladder.poNo || ''}`],
+  ];
+  metaLines.forEach(cols => {
+    if (cols.length === 3) {
+      doc.text(cols[0], margin, y);
+      doc.text(cols[1], 110, y);
+      doc.text(cols[2], 175, y);
+    } else {
+      doc.text(cols[0], margin, y);
+    }
+    y += 5.5;
+  });
+  y += 2;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setFillColor(230, 235, 245);
+  doc.rect(margin, y, W - margin * 2, 6, 'F');
+  doc.text('#', margin + 2, y + 4);
+  doc.text('Description', margin + 10, y + 4);
+  doc.text('Yes/No/N/A', 148, y + 4);
+  doc.text('Remarks', 170, y + 4);
+  y += 6;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+
+  record.checklist.forEach((item, i) => {
+    const descLines = doc.splitTextToSize(item.description, 116);
+    const rowH = Math.max(6, descLines.length * 4.2);
+    if (y + rowH > 270) { doc.addPage(); y = 14; }
+    if (i % 2 === 0) { doc.setFillColor(248, 250, 252); doc.rect(margin, y, W - margin * 2, rowH, 'F'); }
+    doc.setDrawColor(210, 215, 225);
+    doc.rect(margin, y, W - margin * 2, rowH);
+    doc.setTextColor(80, 80, 80);
+    doc.text(String(item.no), margin + 2, y + 4);
+    doc.setTextColor(0, 0, 0);
+    doc.text(descLines, margin + 10, y + 4);
+    const ansColor = item.answer === 'Yes' ? [21, 128, 61] : item.answer === 'No' ? [185, 28, 28] : [100, 100, 100];
+    doc.setTextColor(...ansColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text(item.answer, 152, y + 4, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    const remLines = doc.splitTextToSize(item.remark || '', 32);
+    doc.text(remLines, 171, y + 4);
+    y += rowH;
+  });
+
+  y += 5;
+  if (y > 255) { doc.addPage(); y = 14; }
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(0, 0, 0);
+  doc.text('Additional Observations, incl. positives & penal actions taken:', margin, y); y += 5;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+  const obsLines = doc.splitTextToSize(record.observations || '(None)', W - margin * 2 - 4);
+  doc.text(obsLines, margin, y); y += obsLines.length * 4.5 + 4;
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Corrective Actions Completed:', margin, y); y += 5;
+  doc.setFont('helvetica', 'normal');
+  const corrLines = doc.splitTextToSize(record.correctiveActions || '(None)', W - margin * 2 - 4);
+  doc.text(corrLines, margin, y); y += corrLines.length * 4.5 + 5;
+
+  if (y > 245) { doc.addPage(); y = 14; }
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+  doc.text('INSPECTED BY: NTPC AREA ENGINEER/EIC/HOS (Name & Signature):', margin, y); y += 5;
+  doc.setFont('helvetica', 'normal');
+  doc.text(record.inspector || '___________________________', margin, y); y += 5;
+  if (record.inspectorSignature) {
+    try { doc.addImage(record.inspectorSignature, 'JPEG', margin, y, 50, 18); } catch (e) {}
+    y += 22;
+  }
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+  doc.text('CONTRACTOR (Name, Signature, Date):', margin, y); y += 5;
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${record.contractorName || '___________________'}   Date: ${record.date}`, margin, y); y += 5;
+  if (record.contractorSignature) {
+    try { doc.addImage(record.contractorSignature, 'JPEG', margin, y, 50, 18); } catch (e) {}
+    y += 22;
+  }
+
+  y += 4;
+  doc.setDrawColor(180, 180, 180);
+  doc.line(margin, y, W - margin, y); y += 4;
+  doc.setFontSize(7); doc.setTextColor(100, 100, 100);
+  doc.text('LMI/FGUTPS/SAFETY/OD/OPS/SAFT/005/safety-16   Rev. No.: R1 June 2024', margin, y);
+  doc.text('Page 1 of ' + (record.ladderPhoto ? '2' : '1'), W - margin, y, { align: 'right' });
+
+  if (record.ladderPhoto) {
+    doc.addPage();
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
+    doc.text('LADDER PHOTO — EVIDENCE OF CHECK', W / 2, 18, { align: 'center' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    doc.text(`Ladder No: ${ladder.ladderNo}   Inspection Date: ${record.date}`, W / 2, 26, { align: 'center' });
+    try {
+      const img = new Image();
+      img.src = record.ladderPhoto;
+      await new Promise(res => { img.onload = res; img.onerror = res; });
+      const maxW = W - margin * 2, maxH = 220;
+      let iw = img.naturalWidth || 800, ih = img.naturalHeight || 600;
+      let rw = maxW, rh = (ih / iw) * maxW;
+      if (rh > maxH) { rh = maxH; rw = (iw / ih) * maxH; }
+      const lx = (W - rw) / 2;
+      doc.addImage(record.ladderPhoto, 'JPEG', lx, 32, rw, rh);
+    } catch (e) { doc.text('(Image could not be rendered)', W / 2, 80, { align: 'center' }); }
+    doc.setFontSize(7); doc.setTextColor(100, 100, 100);
+    doc.text('LMI/FGUTPS/SAFETY/OD/OPS/SAFT/005/safety-16   Rev. No.: R1 June 2024', margin, 285);
+    doc.text('Page 2 of 2', W - margin, 285, { align: 'right' });
+  }
+
+  // Convert to base64 and upload to Google Drive folder "Ladder Records"
+  const pdfBase64 = doc.output('datauristring').split(',')[1];
+  const fileName = `Ladder_Inspection_${ladder.ladderNo}_${record.date}_${record.id}.pdf`;
+
+  try {
+    const formData = new FormData();
+    formData.append('file', pdfBase64);
+    formData.append('name', fileName);
+    formData.append('type', 'application/pdf');
+    formData.append('folder', 'Ladder Records');
+
+    const res = await fetch(API_URL, { method: 'POST', body: formData });
+    const result = await res.json();
+    if (result.url) {
+      console.log('✅ Ladder inspection PDF uploaded to Drive:', result.url);
+      return result.url;
+    } else {
+      console.warn('Drive upload returned no URL:', result);
+      doc.save(fileName);
+      return '';
+    }
+  } catch (err) {
+    console.error('Drive upload failed, saving locally:', err);
+    doc.save(fileName);
+    return '';
+  }
+}
+
+/* ---- PAST INSPECTIONS MODAL ---- */
+function openPastInspections(ladderId) {
+  const ladder = (state.ladders || []).find(l => l.id === ladderId);
+  if (!ladder) return;
+  const inspections = (ladder.inspections || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const rows = inspections.length === 0
+    ? [el('div', { class: 'text-sm text-slate-500 text-center py-8' }, 'No inspections recorded yet.')]
+    : inspections.map((insp, idx) => {
+      const inspNo = inspections.length - idx;
+      return el('div', { class: 'flex items-center justify-between border-b py-3 px-2 anim-row-in hover:bg-slate-50 rounded-lg' }, [
+        el('div', { class: 'flex items-center gap-4' }, [
+          el('div', { class: 'w-8 h-8 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-xs font-bold' }, `#${inspNo}`),
+          el('div', {}, [
+            el('div', { class: 'font-medium text-sm' }, `Inspection #${inspNo}`),
+            el('div', { class: 'text-xs text-slate-500' }, insp.date),
+          ])
+        ]),
+        el('div', { class: 'flex items-center gap-2' }, [
+          insp.driveUrl
+            ? el('a', {
+                href: insp.driveUrl,
+                target: '_blank',
+                class: 'px-3 py-1.5 bg-sky-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1'
+              }, '📄 View Checklist')
+            : el('span', { class: 'text-xs text-slate-400 italic' }, 'No file linked'),
+          el('button', {
+            class: 'px-2 py-1.5 border border-red-200 text-red-500 rounded-lg text-xs',
+            onclick: () => {
+              if (!confirm('Delete this inspection record?')) return;
+              persist(d => ({
+                ...d,
+                ladders: (d.ladders || []).map(l => l.id === ladderId
+                  ? { ...l, inspections: (l.inspections || []).filter(i => i.id !== insp.id) }
+                  : l)
+              }));
+              modal.remove();
+              setTimeout(() => openPastInspections(ladderId), 100);
+            }
+          }, 'Delete')
+        ])
+      ]);
+    });
+
+  const modal = el('div', { class: 'fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4' },
+    el('div', { class: 'bg-white rounded-xl w-[520px] max-h-[80vh] flex flex-col shadow-2xl' }, [
+      el('div', { class: 'p-5 border-b flex items-center justify-between' }, [
+        el('div', {}, [
+          el('div', { class: 'text-xs text-slate-500 uppercase tracking-wide' }, 'Inspection History'),
+          el('h3', { class: 'text-lg font-bold mt-0.5' }, `${ladder.ladderNo}${ladder.description ? ' — ' + ladder.description : ''}`),
+        ]),
+        el('button', { class: 'text-slate-400 hover:text-slate-700 text-xl font-bold', onclick: () => modal.remove() }, '✕')
+      ]),
+      el('div', { class: 'flex-1 overflow-y-auto px-4 py-2' }, rows),
+      el('div', { class: 'p-4 border-t flex justify-between items-center bg-slate-50 rounded-b-xl' }, [
+        el('span', { class: 'text-sm text-slate-500' }, `${inspections.length} inspection${inspections.length !== 1 ? 's' : ''} total`),
+        el('button', {
+          class: 'px-4 py-2 bg-sky-600 text-white rounded-lg text-sm font-semibold',
+          onclick: () => { modal.remove(); openInspectionModal(ladderId); }
+        }, '+ New Inspection')
+      ])
+    ])
+  );
+  showAnimatedModal(modal);
+}
+</script>
+
+<script>
   if(appReady) document.dispatchEvent(new CustomEvent('statechange'));
   updateNavActive();
-});
 </script>
 </body>
 </html>
