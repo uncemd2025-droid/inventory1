@@ -776,7 +776,7 @@ input:focus, select:focus, textarea:focus {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0,0,0,.10);
-  z-index: 9999;
+  z-index: 999999;
   max-height: 220px;
   overflow-y: auto;
   display: none;
@@ -912,6 +912,28 @@ input:focus, select:focus, textarea:focus {
 </div>
 
 <script>
+/* ===== STACKING-CONTEXT FIX =====
+   Several elements (section.bg-white, .metric-card, .vehicle-card, etc.)
+   use an entrance animation that ends with `transform: translateY(0)`.
+   Because fill-mode is "both", that transform value lingers forever,
+   which creates a permanent new CSS stacking context on the element.
+   That traps the z-index of any absolutely-positioned children (like our
+   searchable-select dropdowns) inside it, so a later sibling section can
+   visually paint over an open dropdown. Once the entrance animation has
+   finished we no longer need it, so we clear it — this removes the
+   lingering transform and the stacking context along with it. */
+document.addEventListener('animationend', (e) => {
+  const t = e.target;
+  if (t && t.classList && (
+        t.classList.contains('metric-card') ||
+        t.classList.contains('vehicle-card') ||
+        t.classList.contains('pie-card') ||
+        (t.tagName === 'SECTION' && t.classList.contains('bg-white'))
+      )) {
+    t.style.animation = 'none';
+  }
+});
+
 /* ===== UI STYLE HELPERS ===== */
 function injectHoverStyles(){
   if(document.getElementById('hover-styles')) return;
@@ -1748,11 +1770,14 @@ function safeDate(val) {
   return new Date(s);
 }
 
-/** Format a date value safely for display */
+/** Format a date value safely for display as DD/MM/YYYY */
 function formatDate(val) {
   const d = safeDate(val);
   if (isNaN(d)) return '—';
-  return d.toLocaleDateString();
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 function renderUndo(){
@@ -2691,7 +2716,7 @@ function buildVehicleTable(vehicle){
     }
 
     const expiryCell = el('td', {}, [
-      el('span',{class:`status-pill ${status.color}`}, rec.date ? `${rec.date}` : '—'),
+      el('span',{class:`status-pill ${status.color}`}, rec.date ? formatDate(rec.date) : '—'),
       rec.date ? el('div',{class:'text-xs mt-1',style:'color:#94a3b8'},status.label) : el('span',{},''),
       rec.date ? el('div',{class:'expiry-bar-wrap'},[
         el('div',{class:'expiry-bar-fill',style:`width:${barPct}%;background:${barColor}`})
@@ -2812,8 +2837,12 @@ function renderLadderInspection() {
   const cont = el('div', {});
 
   // Header
+  const totalLadders = Array.isArray(state.ladders) ? state.ladders.length : 0;
   cont.appendChild(el('div', { class: 'flex items-center justify-between mb-4' }, [
-    el('h2', { class: 'text-2xl font-semibold' }, 'Ladder Records'),
+    el('div', { class: 'flex items-center gap-3' }, [
+      el('h2', { class: 'text-2xl font-semibold' }, 'Ladder Records'),
+      el('span', { class: 'status-pill status-ok', style: 'font-size:12px' }, `${totalLadders} ladder${totalLadders !== 1 ? 's' : ''} total`)
+    ]),
     el('button', {
       class: 'px-4 py-2 bg-green-600 text-white rounded-lg font-semibold',
       onclick: () => openAddLadderModal()
@@ -2826,6 +2855,11 @@ function renderLadderInspection() {
     app.appendChild(cont);
     return;
   }
+
+  // Sort ladders alphabetically (natural/numeric-aware) by ladder number
+  const sortedLadders = (state.ladders || []).slice().sort((a, b) =>
+    String(a.ladderNo || '').localeCompare(String(b.ladderNo || ''), undefined, { numeric: true, sensitivity: 'base' })
+  );
 
   // Ladder table
   const tableWrap = el('div', { class: 'bg-white rounded-xl shadow overflow-hidden' });
@@ -2840,14 +2874,14 @@ function renderLadderInspection() {
     el('th', { class: 'p-3 text-center font-semibold' }, 'Actions'),
   ])));
   const tbody = el('tbody', {});
-  (state.ladders || []).forEach(ladder => {
+  sortedLadders.forEach(ladder => {
     const inspCount = (ladder.inspections || []).length;
     const tr = el('tr', { class: 'border-b anim-row-in' }, [
       el('td', { class: 'p-3 font-medium text-sky-700' }, ladder.ladderNo || '—'),
       el('td', { class: 'p-3' }, ladder.description || '—'),
       el('td', { class: 'p-3' }, ladder.make || '—'),
       el('td', { class: 'p-3' }, ladder.poNo || '—'),
-      el('td', { class: 'p-3' }, ladder.purchasedOn || '—'),
+      el('td', { class: 'p-3' }, ladder.purchasedOn ? formatDate(ladder.purchasedOn) : '—'),
       el('td', { class: 'p-3 text-center' },
         el('span', { class: 'status-pill status-ok' }, `${inspCount} record${inspCount !== 1 ? 's' : ''}`)
       ),
@@ -2974,7 +3008,7 @@ function openInspectionModal(ladderId) {
         el('div', {}, [el('div', { class: 'text-xs text-slate-400 uppercase tracking-wide' }, 'Make'), el('div', { class: 'font-semibold mt-0.5' }, ladder.make || '—')]),
         el('div', {}, [el('div', { class: 'text-xs text-slate-400 uppercase tracking-wide' }, 'Description'), el('div', { class: 'font-semibold mt-0.5' }, ladder.description || '—')]),
         el('div', {}, [el('div', { class: 'text-xs text-slate-400 uppercase tracking-wide' }, 'PO No.'), el('div', { class: 'font-semibold mt-0.5' }, ladder.poNo || '—')]),
-        el('div', {}, [el('div', { class: 'text-xs text-slate-400 uppercase tracking-wide' }, 'Purchased On'), el('div', { class: 'font-semibold mt-0.5' }, ladder.purchasedOn || '—')]),
+        el('div', {}, [el('div', { class: 'text-xs text-slate-400 uppercase tracking-wide' }, 'Purchased On'), el('div', { class: 'font-semibold mt-0.5' }, ladder.purchasedOn ? formatDate(ladder.purchasedOn) : '—')]),
       ]),
 
       // Inspection meta fields
@@ -3199,7 +3233,7 @@ async function generateAndUploadInspectionPDF(ladder, record) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   const metaLines = [
-    [`Department / Section: ${record.department || ''}`, `Area: ${record.area || ''}`, `Date: ${record.date}`],
+    [`Department / Section: ${record.department || ''}`, `Area: ${record.area || ''}`, `Date: ${formatDate(record.date)}`],
     [`Contractor / Agency: ${record.contractor || ''}`],
     [`Ladder Number: ${ladder.ladderNo}   Make: ${ladder.make || ''}   PO No.: ${ladder.poNo || ''}`],
   ];
@@ -3324,7 +3358,7 @@ async function generateAndUploadInspectionPDF(ladder, record) {
   doc.text('CONTRACTOR', sigRightX, sigYR); sigYR += 4.5;
   doc.setFont('helvetica', 'normal');
   doc.text('Name: ' + (record.contractorName || '______________________'), sigRightX, sigYR); sigYR += 4.5;
-  doc.text('Date: ' + record.date, sigRightX, sigYR);
+  doc.text('Date: ' + formatDate(record.date), sigRightX, sigYR);
 
   // Advance y past whichever block is taller
   y = Math.max(sigY, sigYR) + 8;
@@ -3341,7 +3375,7 @@ async function generateAndUploadInspectionPDF(ladder, record) {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
     doc.text('LADDER PHOTO — EVIDENCE OF CHECK', W / 2, 18, { align: 'center' });
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-    doc.text(`Ladder No: ${ladder.ladderNo}   Inspection Date: ${record.date}`, W / 2, 26, { align: 'center' });
+    doc.text(`Ladder No: ${ladder.ladderNo}   Inspection Date: ${formatDate(record.date)}`, W / 2, 26, { align: 'center' });
     try {
       const img = new Image();
       img.src = record.ladderPhoto;
